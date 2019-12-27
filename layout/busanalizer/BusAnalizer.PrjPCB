@@ -71,6 +71,10 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=UPPQVJGH
 
+[GeneratedDocument1]
+DocumentPath=Project Outputs for BusAnalizer\Design Rule Check - busanaliz.html
+DItemRevisionGUID=
+
 [Configuration1]
 Name=Sources
 ParameterCount=0

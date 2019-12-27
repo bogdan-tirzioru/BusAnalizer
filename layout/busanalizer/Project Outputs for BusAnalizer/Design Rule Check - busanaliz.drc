@@ -1,10 +1,21 @@
 Protel Design System Design Rule Check
 PCB File : D:\gitRepos\BusAnalizer\layout\busanalizer\busanaliz.PcbDoc
 Date     : 12/27/2019
-Time     : 3:00:35 PM
+Time     : 9:53:18 PM
 
 Processing Rule : Clearance Constraint (Gap=0.2mm) (All),(All)
-Rule Violations :0
+   Violation between Clearance Constraint: (0.009mm < 0.2mm) Between Polygon Region (115 hole(s)) Top Layer And Track (0mm,0.127mm)(0mm,59.563mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Polygon Region (115 hole(s)) Top Layer And Track (0mm,0mm)(99.187mm,0mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Polygon Region (115 hole(s)) Top Layer And Track (0mm,59.563mm)(99.187mm,59.563mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (0.184mm < 0.2mm) Between Polygon Region (115 hole(s)) Top Layer And Track (99.06mm,-0.254mm)(99.06mm,59.436mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (0.172mm < 0.2mm) Between Polygon Region (218 hole(s)) Bottom Layer And Track (0mm,0.127mm)(0mm,59.563mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Polygon Region (218 hole(s)) Bottom Layer And Track (0mm,0mm)(99.187mm,0mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Polygon Region (218 hole(s)) Bottom Layer And Track (0mm,59.563mm)(99.187mm,59.563mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (0.027mm < 0.2mm) Between Polygon Region (218 hole(s)) Bottom Layer And Track (99.06mm,-0.254mm)(99.06mm,59.436mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Track (0mm,0mm)(99.187mm,0mm) on Keep-Out Layer And Track (29.337mm,2.921mm)(31.896mm,0.362mm) on Top Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Track (0mm,0mm)(99.187mm,0mm) on Keep-Out Layer And Track (31.896mm,0.362mm)(66.692mm,0.362mm) on Top Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Track (0mm,0mm)(99.187mm,0mm) on Keep-Out Layer And Track (66.692mm,0.362mm)(68.235mm,1.905mm) on Top Layer 
+Rule Violations :11
 
 Processing Rule : Short-Circuit Constraint (Allowed=No) (All),(All)
 Rule Violations :0
@@ -150,6 +161,6 @@ Processing Rule : Height Constraint (Min=0mm) (Max=25.4mm) (Prefered=12.7mm) (Al
 Rule Violations :0
 
 
-Violations Detected : 107
+Violations Detected : 118
 Waived Violations : 0
 Time Elapsed        : 00:00:01

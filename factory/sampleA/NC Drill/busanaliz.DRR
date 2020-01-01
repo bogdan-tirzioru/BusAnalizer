@@ -1,0 +1,20 @@
+----------------------------------------------------------------------------------------------------------------------------------
+NCDrill File Report For: busanaliz.PcbDoc   12/31/2019  10:04:58 AM
+----------------------------------------------------------------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : busanaliz.TXT
+
+Tool       Hole Size               Hole Tolerance               Hole Type       Hole Count   Plated         Tool Travel
+----------------------------------------------------------------------------------------------------------------------------------
+T1      12mil (0.3mm)                                             Round             84        PTH        0.00inch (0.00mm)
+T2      32mil (0.813mm)                                           Round             2         PTH        0.00inch (0.00mm)
+T3      36mil (0.914mm)                                           Round             18        PTH        0.00inch (0.00mm)
+T4      40mil (1.016mm)                                           Round             24        PTH        0.00inch (0.00mm)
+T5      43mil (1.09mm)                                            Round             18        PTH        0.00inch (0.00mm)
+T6      50mil (1.27mm)                                            Round             4         PTH        0.00inch (0.00mm)
+T7      128mil (3.26mm)                                           Round             4         PTH        0.00inch (0.00mm)
+----------------------------------------------------------------------------------------------------------------------------------
+Totals                                                                              154
+
+Total Processing Time (hh:mm:ss) : 00:00:00

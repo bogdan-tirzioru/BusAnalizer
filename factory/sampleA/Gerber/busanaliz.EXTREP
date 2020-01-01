@@ -1,0 +1,27 @@
+------------------------------------------------------------------------------------------
+Gerber File Extension Report For: busanaliz.GBR   12/31/2019  10:04:49 AM
+------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------
+Layer Extension     Layer Description                      
+------------------------------------------------------------------------------------------
+.GTL                Top Layer                               
+.GBS                Bottom Solder                           
+.GBL                Bottom Layer                            
+.GPB                Bottom Pad Master                       
+.GTS                Top Solder                              
+.GTP                Top Paste                               
+.GBP                Bottom Paste                            
+.GPT                Top Pad Master                          
+.GTO                Top Overlay                             
+.GBO                Bottom Overlay                          
+.GKO                Keep-Out Layer                          
+.GM1                Mechanical 1                            
+.GM6                Mechanical 6                            
+.GM13               Mechanical 13                           
+.GM15               Mechanical 15                           
+.GM27               Mechanical 27                           
+.GM16               Mechanical 16                           
+.GM37               Mechanical 37                           
+------------------------------------------------------------------------------------------

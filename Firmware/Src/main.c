@@ -564,6 +564,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  GPIOB->MODER = (GPIOB->MODER & 0xfffffff0)|0x04;
 
 }
 
@@ -657,6 +658,7 @@ void StartDefaultTask(void const * argument)
   uint8_t ui8LocalMsgBuffernr=0;
   uint8_t ui8LocalIndexRxUsB=0;
   uint8_t ui8StatusTxUsb=0;
+  GPIOB->ODR ^=0x3;
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
@@ -666,9 +668,11 @@ void StartDefaultTask(void const * argument)
   ui16IndexRxUsb=0;
   ui16RxToBeSend=0;
   ui16TxToBeSend=0;
+
   /* Infinite loop */
   for(;;)
   {
+#if 0
 	/*Read from CAN messages*/
 	for (ui8LocalMsgBuffernr=0;ui8LocalMsgBuffernr<NumberOfRxBuffers;ui8LocalMsgBuffernr++)
 	{
@@ -690,6 +694,8 @@ void StartDefaultTask(void const * argument)
 			ui16RxToBeSend--;
 		sListTxMessage[ui16IndexRxUsb].ui8StateMsg = 0;
 	}
+#endif
+
     osDelay(1);
   }
   /* USER CODE END 5 */ 

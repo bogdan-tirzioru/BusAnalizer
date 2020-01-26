@@ -558,14 +558,24 @@ static void MX_USART1_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  GPIOB->MODER = (GPIOB->MODER & 0xfffffff0)|0x04;
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : PB0 PB1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIOB->MODER = (GPIOB->MODER & 0xfffffff0)|0x04;
 }
 
 /* USER CODE BEGIN 4 */
@@ -648,20 +658,16 @@ void ReadCANMsgByBufferIndex(FDCAN_HandleTypeDef *hfdcan,uint8_t ui8LocalMsgBuff
 	}
 }
 /* USER CODE END Header_StartDefaultTask */
-
-
-
-
-
 void StartDefaultTask(void const * argument)
 {
+
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
+  /* USER CODE BEGIN 5 */
   uint8_t ui8LocalMsgBuffernr=0;
   uint8_t ui8LocalIndexRxUsB=0;
   uint8_t ui8StatusTxUsb=0;
   GPIOB->ODR ^=0x3;
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 5 */
   HAL_FDCAN_Start(&hfdcan1);
   HAL_FDCAN_Start(&hfdcan2);
   ui8LocalMsgBuffernr = 0;

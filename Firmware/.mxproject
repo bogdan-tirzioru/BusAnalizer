@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=E:/myfiles/CANAnalizer/Firmware/Inc
+HeaderPath=D:/gitRepos/BusAnalizer/Firmware/Inc
 HeaderFiles=FreeRTOSConfig.h;usb_device.h;usbd_conf.h;usbd_desc.h;usbd_cdc_if.h;stm32h7xx_it.h;stm32h7xx_hal_conf.h;main.h;
-SourcePath=E:/myfiles/CANAnalizer/Firmware/Src
+SourcePath=D:/gitRepos/BusAnalizer/Firmware/Src
 SourceFiles=freertos.c;usb_device.c;usbd_conf.c;usbd_desc.c;usbd_cdc_if.c;stm32h7xx_it.c;stm32h7xx_hal_msp.c;stm32h7xx_hal_timebase_tim.c;main.c;
 
 [PreviousLibFiles]

@@ -113,6 +113,7 @@ uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
   */
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
+
 /* USER CODE BEGIN EXPORTED_VARIABLES */
 
 /* USER CODE END EXPORTED_VARIABLES */

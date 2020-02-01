@@ -48,8 +48,7 @@ Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.o: \
  D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
  D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
- D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
- D:/gitRepos/BusAnalizer/Firmware/Inc/main.h
+ D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
 
 D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:
 
@@ -148,5 +147,3 @@ D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/In
 D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
 
 D:/gitRepos/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
-
-D:/gitRepos/BusAnalizer/Firmware/Inc/main.h:

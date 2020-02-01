@@ -642,23 +642,36 @@ void FindNextMsgTx(uint16_t *ui16Index,uint8_t ui8Conditie)
 void ReadCANMsgByBufferIndex(FDCAN_HandleTypeDef *hfdcan,uint8_t ui8LocalMsgBuffernr)
 {
 	/*check if message rx buffer is received*/
+	HAL_StatusTypeDef leStatus;
 	uint8_t ui8IsAvailableReceiveCh1=HAL_FDCAN_IsRxBufferMessageAvailable(&hfdcan1,ui8LocalMsgBuffernr);
 	if (ui8IsAvailableReceiveCh1==1)
 	{
 		FindNextMsgRx(&ui16IndexRxMsg,0);
 		/*get actual message and stored in RAM*/
-		HAL_FDCAN_GetRxMessage(hfdcan,ui8LocalMsgBuffernr,&(sListRxMessage[ui16IndexRxMsg].sRxHeaderTypeDef),(sListRxMessage[ui16IndexRxMsg].aui8PayLoad));
-		if(ui16IndexRxMsg<MaxSizeTxMessage)
+		leStatus = HAL_FDCAN_GetRxMessage(hfdcan,ui8LocalMsgBuffernr,&(sListRxMessage[ui16IndexRxMsg].sRxHeaderTypeDef),(sListRxMessage[ui16IndexRxMsg].aui8PayLoad));
+		if(leStatus == HAL_OK )
 		{
-			//sListTxMessage[ui16IndexRxMsg]=sListRxMessage[ui16IndexRxMsg];
-			ui16RxToBeSend++;
+			if(ui16IndexRxMsg<MaxSizeTxMessage)
+			{
+				//sListTxMessage[ui16IndexRxMsg]=sListRxMessage[ui16IndexRxMsg];
+				ui16RxToBeSend++;
+			}
+			/*mark the message as received from CAN*/
+			sListRxMessage[ui16IndexRxMsg].ui8StateMsg = 1;
 		}
-		/*mark the message as received from CAN*/
-		sListRxMessage[ui16IndexRxMsg].ui8StateMsg = 1;
+		else
+		{
+			sListRxMessage[ui16IndexRxMsg].ui8StateMsg = 0;
+		}
 
 	}
 }
 char sText[]="Hello world";
+
+void InitializationMemory(void)
+{
+	memset((char *)&sListTxMessage,0,sizeof(TMessageInfo)*MaxSizeTxMessage);
+}
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
@@ -677,11 +690,11 @@ void StartDefaultTask(void const * argument)
   ui16RxToBeSend=0;
   ui16TxToBeSend=0;
 
+  InitializationMemory();
 
   /* Infinite loop */
   for(;;)
   {
-#if 0
 	/*Read from CAN messages*/
 	for (ui8LocalMsgBuffernr=0;ui8LocalMsgBuffernr<NumberOfRxBuffers;ui8LocalMsgBuffernr++)
 	{
@@ -689,25 +702,26 @@ void StartDefaultTask(void const * argument)
 		ReadCANMsgByBufferIndex(&hfdcan2,ui8LocalMsgBuffernr);
 	}
 	/*send to USB, frames received from CAN*/
-	for (ui8LocalIndexRxUsB=0;ui8LocalIndexRxUsB<NumberOfRxToSendUsb;ui8LocalIndexRxUsB++)
+	if(ui16RxToBeSend!= 0)
 	{
-		/*find a valid position in the buffer*/
-		FindNextMsgRx(&ui16IndexRxUsb,1);
-		do
+		for (ui8LocalIndexRxUsB=0;ui8LocalIndexRxUsB<NumberOfRxToSendUsb;ui8LocalIndexRxUsB++)
 		{
-			ui8StatusTxUsb = CDC_Transmit_HS((uint8_t*)&sListTxMessage[ui16IndexRxUsb],sizeof(sListTxMessage[ui16IndexRxUsb]));
+			/*find a valid position in the buffer*/
+			FindNextMsgRx(&ui16IndexRxUsb,1);
+			do
+			{
+				ui8StatusTxUsb = CDC_Transmit_HS((uint8_t*)&sListTxMessage[ui16IndexRxUsb],sizeof(sListTxMessage[ui16IndexRxUsb]));
 
-		}while(ui8StatusTxUsb == USBD_BUSY);
-		/*another message has been send*/
-		if(ui16RxToBeSend>0)
-			ui16RxToBeSend--;
-		sListTxMessage[ui16IndexRxUsb].ui8StateMsg = 0;
+			}while(ui8StatusTxUsb == USBD_BUSY);
+			/*another message has been send*/
+			if(ui16RxToBeSend>0)
+				ui16RxToBeSend--;
+			sListTxMessage[ui16IndexRxUsb].ui8StateMsg = 0;
+		}
 	}
-#endif
-	//ui8StatusTxUsb = CDC_Transmit_HS((uint8_t*)&sListTxMessage[ui16IndexRxUsb],sizeof(sListTxMessage[ui16IndexRxUsb]));
-	CDC_Transmit_HS(&sText,sizeof(sText));
-    osDelay(25);
-    GPIOB->ODR ^=0x3;
+    osDelay(500);
+    CDC_Transmit_HS(&sText,sizeof(sText));
+    GPIOB->ODR ^=0x1;
   }
   /* USER CODE END 5 */ 
 }

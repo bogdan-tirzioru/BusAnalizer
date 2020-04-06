@@ -77,7 +77,8 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+FDCAN_RxHeaderTypeDef RxHeader;
+uint8_t RxData[8];
 /* USER CODE END 0 */
 
 /**
@@ -247,7 +248,7 @@ static void MX_FDCAN1_Init(void)
 {
 
   /* USER CODE BEGIN FDCAN1_Init 0 */
-
+	FDCAN_FilterTypeDef sFilterConfig;
   /* USER CODE END FDCAN1_Init 0 */
 
   /* USER CODE BEGIN FDCAN1_Init 1 */
@@ -255,10 +256,10 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
-  hfdcan1.Init.AutoRetransmission = DISABLE;
+  hfdcan1.Init.Mode = FDCAN_MODE_EXTERNAL_LOOPBACK;
+  hfdcan1.Init.AutoRetransmission = ENABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
-  hfdcan1.Init.ProtocolException = DISABLE;
+  hfdcan1.Init.ProtocolException = ENABLE;
   hfdcan1.Init.NominalPrescaler = 2;
   hfdcan1.Init.NominalSyncJumpWidth = 1;
   hfdcan1.Init.NominalTimeSeg1 = 4;
@@ -286,6 +287,33 @@ static void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+  /* Configure Rx filter */
+    sFilterConfig.IdType = FDCAN_STANDARD_ID;
+    sFilterConfig.FilterIndex = 0;
+    sFilterConfig.FilterType = FDCAN_FILTER_MASK;
+    sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+    sFilterConfig.FilterID1 = 0x321;
+    sFilterConfig.FilterID2 = 0x7FF;
+    if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK)
+    {
+      /* Filter configuration Error */
+      Error_Handler();
+    }
+
+    /* Configure global filter to reject all non-matching frames */
+    HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+    /* Start the FDCAN module */
+	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+	{
+	/* Start Error */
+	Error_Handler();
+	}
+
+	if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
+	{
+	/* Notification Error */
+	Error_Handler();
+	}
 
   /* USER CODE END FDCAN1_Init 2 */
 
@@ -586,7 +614,39 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  Rx FIFO 0 callback.
+  * @param  hfdcan: pointer to an FDCAN_HandleTypeDef structure that contains
+  *         the configuration information for the specified FDCAN.
+  * @param  RxFifo0ITs: indicates which Rx FIFO 0 interrupts are signalled.
+  *                     This parameter can be any combination of @arg FDCAN_Rx_Fifo0_Interrupts.
+  * @retval None
+  */
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+{
+  if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
+  {
+    /* Retreive Rx messages from RX FIFO0 */
+    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
+    {
+    /* Reception Error */
+    Error_Handler();
+    }
 
+    /* Display LEDx */
+    if ((RxHeader.Identifier == 0x321) && (RxHeader.IdType == FDCAN_STANDARD_ID) && (RxHeader.DataLength == FDCAN_DLC_BYTES_2))
+    {
+   //   LED_Display(RxData[0]);
+   //   ubKeyNumber = RxData[0];
+    }
+
+    if (HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
+    {
+      /* Notification Error */
+      Error_Handler();
+    }
+  }
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -678,6 +738,12 @@ void InitializationMemory(void)
 {
 	memset((char *)&sListTxMessage,0,sizeof(TMessageInfo)*MaxSizeTxMessage);
 }
+
+
+
+FDCAN_TxHeaderTypeDef FixedTxHeader;
+uint8_t FixedTxData[8];
+
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
@@ -702,6 +768,29 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+
+	  /* Prepare Tx Header */
+	  FixedTxHeader.Identifier = 0x321;
+	  FixedTxHeader.IdType = FDCAN_STANDARD_ID;
+	  FixedTxHeader.TxFrameType = FDCAN_DATA_FRAME;
+	  FixedTxHeader.DataLength = FDCAN_DLC_BYTES_2;
+	  FixedTxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	  FixedTxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+	  FixedTxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+	  FixedTxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	  FixedTxHeader.MessageMarker = 0;
+    /* Set the data to be transmitted */
+	 FixedTxData[0] = 0xBC;
+	 FixedTxData[1] = 0xAD;
+
+	 /* Start the Transmission process */
+	 if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FixedTxHeader, FixedTxData) != HAL_OK)
+	 {
+	   /* Transmission request Error */
+	   Error_Handler();
+	 }
+
+#if 0
 	/*Read from CAN messages*/
 	for (ui8LocalMsgBuffernr=0;ui8LocalMsgBuffernr<NumberOfRxBuffers;ui8LocalMsgBuffernr++)
 	{
@@ -726,6 +815,7 @@ void StartDefaultTask(void const * argument)
 			sListTxMessage[ui16IndexRxUsb].ui8StateMsg = 0;
 		}
 	}
+#endif
     osDelay(500);
     CDC_Transmit_HS(&sText,sizeof(sText));
     GPIOB->ODR ^=0x1;

@@ -755,7 +755,7 @@ void StartDefaultTask(void const * argument)
   uint8_t ui8StatusTxUsb=0;
   GPIOA->ODR &= 0xffe7;
   GPIOB->ODR ^=0x0003;
-  HAL_FDCAN_Start(&hfdcan1);
+//  HAL_FDCAN_Start(&hfdcan1);
   HAL_FDCAN_Start(&hfdcan2);
  // USBD_CDC_Init(&hUsbDeviceHS,0);
   ui8LocalMsgBuffernr = 0;
@@ -852,7 +852,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+  while(1);
   /* USER CODE END Error_Handler_Debug */
 }
 

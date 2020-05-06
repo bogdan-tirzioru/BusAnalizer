@@ -301,7 +301,7 @@ static void MX_FDCAN1_Init(void)
     }
 
     /* Configure global filter to reject all non-matching frames */
-    HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+    HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
     /* Start the FDCAN module */
 	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
 	{
@@ -624,6 +624,7 @@ static void MX_GPIO_Init(void)
   */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
+  GPIOB->ODR ^=0x2;
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
   {
     /* Retreive Rx messages from RX FIFO0 */
@@ -732,7 +733,7 @@ void ReadCANMsgByBufferIndex(FDCAN_HandleTypeDef *hfdcan,uint8_t ui8LocalMsgBuff
 
 	}
 }
-char sText[]="Hello world";
+char sText[]="--------\n\r";
 
 void InitializationMemory(void)
 {
@@ -756,7 +757,7 @@ void StartDefaultTask(void const * argument)
   GPIOA->ODR &= 0xffe7;
   GPIOB->ODR ^=0x0003;
 //  HAL_FDCAN_Start(&hfdcan1);
-  HAL_FDCAN_Start(&hfdcan2);
+//  HAL_FDCAN_Start(&hfdcan2);
  // USBD_CDC_Init(&hUsbDeviceHS,0);
   ui8LocalMsgBuffernr = 0;
   ui16IndexRxUsb=0;
@@ -773,7 +774,7 @@ void StartDefaultTask(void const * argument)
 	  FixedTxHeader.Identifier = 0x321;
 	  FixedTxHeader.IdType = FDCAN_STANDARD_ID;
 	  FixedTxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	  FixedTxHeader.DataLength = FDCAN_DLC_BYTES_2;
+	  FixedTxHeader.DataLength = FDCAN_DLC_BYTES_3;
 	  FixedTxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	  FixedTxHeader.BitRateSwitch = FDCAN_BRS_OFF;
 	  FixedTxHeader.FDFormat = FDCAN_CLASSIC_CAN;
@@ -782,6 +783,7 @@ void StartDefaultTask(void const * argument)
     /* Set the data to be transmitted */
 	 FixedTxData[0] = 0xBC;
 	 FixedTxData[1] = 0xAD;
+	 FixedTxData[2] ++;
 
 	 /* Start the Transmission process */
 	 if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FixedTxHeader, FixedTxData) != HAL_OK)
@@ -816,9 +818,14 @@ void StartDefaultTask(void const * argument)
 		}
 	}
 #endif
-    osDelay(500);
+
+    for (uint8_t ui8Index=0;ui8Index<3;ui8Index++)
+    {
+    	sText[ui8Index +1] = RxData[ui8Index];
+    }
     CDC_Transmit_HS(&sText,sizeof(sText));
     GPIOB->ODR ^=0x1;
+    osDelay(100);
   }
   /* USER CODE END 5 */ 
 }

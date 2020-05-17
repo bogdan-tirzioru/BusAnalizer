@@ -263,13 +263,14 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval USBD_OK if all operations are OK else USBD_FAIL
   */
+uint8_t au8CommandBuffer[100];
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
-  FindNextMsgTx(&ui16IndexTxUsb,1);
-  USBD_CDC_SetRxBuffer(&hUsbDeviceHS, (uint8_t *)&sListTxMessage[ui16IndexTxMsg]);
+//  FindNextMsgTx(&ui16IndexTxUsb,1);
+  USBD_CDC_SetRxBuffer(&hUsbDeviceHS, (uint8_t *)&au8CommandBuffer);
   USBD_CDC_ReceivePacket(&hUsbDeviceHS);
-  ui16TxToBeSend++;
+ // ui16TxToBeSend++;
   return (USBD_OK);
   /* USER CODE END 11 */
 }

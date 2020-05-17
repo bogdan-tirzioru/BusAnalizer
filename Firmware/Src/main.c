@@ -58,7 +58,7 @@ UART_HandleTypeDef huart1;
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDeviceHS;
-uint8_t ui8SetRequestToUsb =0;
+uint8_t ui8SetRequestToUsbCAN1 =0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,7 +70,7 @@ static void MX_I2C1_Init(void);
 static void MX_RTC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
-void StartDefaultTask(void const * argument);
+
 
 /* USER CODE BEGIN PFP */
 
@@ -80,6 +80,12 @@ void StartDefaultTask(void const * argument);
 /* USER CODE BEGIN 0 */
 FDCAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[8];
+uint16_t ui16MessageTrigger =0;
+FDCAN_TxHeaderTypeDef FixedTxHeader;
+uint8_t FixedTxData[8];
+char sText[100];
+uint32_t ui32CounterTransmisionErrorCAN1=0;
+uint8_t ui8ErrorTransmisionCAN1 =0;
 /* USER CODE END 0 */
 
 /**
@@ -142,32 +148,67 @@ int main(void)
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
+  /* USER CODE END WHILE */
+	/* init code for USB_DEVICE */
+	MX_USB_DEVICE_Init();
+	/* USER CODE BEGIN 5 */
+	GPIOA->ODR &= 0xffe7;
+	GPIOB->ODR ^=0x0003;
+	//  HAL_FDCAN_Start(&hfdcan1);
+	//  HAL_FDCAN_Start(&hfdcan2);
+	// USBD_CDC_Init(&hUsbDeviceHS,0);
+
+
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
-  /* Start scheduler */
-  osKernelStart();
-  
-  /* We should never get here as control is now taken by the scheduler */
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-  }
+
+	if((ui16MessageTrigger%1024) == 0)
+	{
+		/* Prepare Tx Header */
+		FixedTxHeader.Identifier = 0x321;
+		FixedTxHeader.IdType = FDCAN_STANDARD_ID;
+		FixedTxHeader.TxFrameType = FDCAN_DATA_FRAME;
+		FixedTxHeader.DataLength = FDCAN_DLC_BYTES_3;
+		FixedTxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+		FixedTxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+		FixedTxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+		FixedTxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+		FixedTxHeader.MessageMarker = 0;
+		/* Set the data to be transmitted */
+		FixedTxData[0] = 0xBC;
+		FixedTxData[1] = 0xAD;
+		FixedTxData[2] ++;
+
+		/* Start the Transmission process */
+		if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FixedTxHeader, FixedTxData) != HAL_OK)
+		{
+		/* Transmission request Error */
+		  ui8ErrorTransmisionCAN1 =1;
+		  Error_Handler();
+		}
+	}
+
+	if (ui8SetRequestToUsbCAN1==1)
+	{
+		sText[0]='\n';
+		sText[1]='\r';
+		for (uint8_t ui8Index=0;ui8Index<3;ui8Index++)
+		{
+			sText[ui8Index +2] = RxData[ui8Index];
+		}
+		CDC_Transmit_HS(&sText,60);
+		GPIOB->ODR ^=0x1;
+		ui8SetRequestToUsbCAN1 =0;
+	}
+
   /* USER CODE END 3 */
+  }
 }
-
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -245,7 +286,7 @@ void SystemClock_Config(void)
   * @param None
   * @retval None
   */
-static void MX_FDCAN1_Init(void)
+void MX_FDCAN1_Init(void)
 {
 
   /* USER CODE BEGIN FDCAN1_Init 0 */
@@ -325,7 +366,7 @@ static void MX_FDCAN1_Init(void)
   * @param None
   * @retval None
   */
-static void MX_FDCAN2_Init(void)
+void MX_FDCAN2_Init(void)
 {
 
   /* USER CODE BEGIN FDCAN2_Init 0 */
@@ -378,7 +419,7 @@ static void MX_FDCAN2_Init(void)
   * @param None
   * @retval None
   */
-static void MX_I2C1_Init(void)
+void MX_I2C1_Init(void)
 {
 
   /* USER CODE BEGIN I2C1_Init 0 */
@@ -424,7 +465,7 @@ static void MX_I2C1_Init(void)
   * @param None
   * @retval None
   */
-static void MX_RTC_Init(void)
+void MX_RTC_Init(void)
 {
 
   /* USER CODE BEGIN RTC_Init 0 */
@@ -487,7 +528,7 @@ static void MX_RTC_Init(void)
   * @param None
   * @retval None
   */
-static void MX_SPI1_Init(void)
+void MX_SPI1_Init(void)
 {
 
   /* USER CODE BEGIN SPI1_Init 0 */
@@ -534,7 +575,7 @@ static void MX_SPI1_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USART1_UART_Init(void)
+void MX_USART1_UART_Init(void)
 {
 
   /* USER CODE BEGIN USART1_Init 0 */
@@ -582,7 +623,7 @@ static void MX_USART1_UART_Init(void)
   * @param None
   * @retval None
   */
-static void MX_GPIO_Init(void)
+void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
@@ -641,7 +682,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
    //   LED_Display(RxData[0]);
    //   ubKeyNumber = RxData[0];
     }
-    ui8SetRequestToUsb=1;
+    ui8SetRequestToUsbCAN1=1;
     if (HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
     {
       /* Notification Error */
@@ -661,178 +702,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
 
 
-__attribute__((section(".bss.receive"))) TMessageInfo sListRxMessage[MaxSizeRxMessage];
-__attribute__((section(".bss.transmit"))) TMessageInfo sListTxMessage[MaxSizeTxMessage];
-
-uint16_t ui16IndexRxMsg;
-uint16_t ui16IndexRxUsb;
-uint16_t ui16IndexTxMsg;
-uint16_t ui16IndexTxUsb;
-uint16_t ui16RxToBeSend;
-uint16_t ui16TxToBeSend;
-
-/*find next place free to store a receive msg*/
-void FindNextMsgRx(uint16_t *ui16Index,uint8_t ui8Conditie)
-{
-	uint16_t ui16GuardCondition = 0;
-	while ((sListRxMessage[*ui16Index].ui8StateMsg == ui8Conditie)&& (ui16GuardCondition<MaxSizeRxMessage))
-	{
-		if ((*ui16Index)>=MaxSizeRxMessage)
-		{
-			*ui16Index=0;
-		}
-		else
-		{
-			(*ui16Index)++;
-		}
-		ui16GuardCondition++;
-	}
-}
-/*find next place free to store a receive msg*/
-void FindNextMsgTx(uint16_t *ui16Index,uint8_t ui8Conditie)
-{
-	uint16_t ui16GuardCondition = 0;
-	while ((sListTxMessage[*ui16Index].ui8StateMsg == ui8Conditie)&& (ui16GuardCondition<MaxSizeTxMessage))
-	{
-		if ((*ui16Index)>=MaxSizeTxMessage)
-		{
-			*ui16Index=0;
-		}
-		else
-		{
-			(*ui16Index)++;
-		}
-		ui16GuardCondition++;
-	}
-}
-
-
-void ReadCANMsgByBufferIndex(FDCAN_HandleTypeDef *hfdcan,uint8_t ui8LocalMsgBuffernr)
-{
-	/*check if message rx buffer is received*/
-	HAL_StatusTypeDef leStatus;
-	uint8_t ui8IsAvailableReceiveCh1=HAL_FDCAN_IsRxBufferMessageAvailable(&hfdcan1,ui8LocalMsgBuffernr);
-	if (ui8IsAvailableReceiveCh1==1)
-	{
-		FindNextMsgRx(&ui16IndexRxMsg,0);
-		/*get actual message and stored in RAM*/
-		leStatus = HAL_FDCAN_GetRxMessage(hfdcan,ui8LocalMsgBuffernr,&(sListRxMessage[ui16IndexRxMsg].sRxHeaderTypeDef),(sListRxMessage[ui16IndexRxMsg].aui8PayLoad));
-		if(leStatus == HAL_OK )
-		{
-			if(ui16IndexRxMsg<MaxSizeTxMessage)
-			{
-				//sListTxMessage[ui16IndexRxMsg]=sListRxMessage[ui16IndexRxMsg];
-				ui16RxToBeSend++;
-			}
-			/*mark the message as received from CAN*/
-			sListRxMessage[ui16IndexRxMsg].ui8StateMsg = 1;
-		}
-		else
-		{
-			sListRxMessage[ui16IndexRxMsg].ui8StateMsg = 0;
-		}
-
-	}
-}
-char sText[]="--------\n\r";
-
-void InitializationMemory(void)
-{
-	memset((char *)&sListTxMessage,0,sizeof(TMessageInfo)*MaxSizeTxMessage);
-}
-
-
-
-FDCAN_TxHeaderTypeDef FixedTxHeader;
-uint8_t FixedTxData[8];
-
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
-{
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 5 */
-  uint8_t ui8LocalMsgBuffernr=0;
-  uint8_t ui8LocalIndexRxUsB=0;
-  uint8_t ui8StatusTxUsb=0;
-  GPIOA->ODR &= 0xffe7;
-  GPIOB->ODR ^=0x0003;
-//  HAL_FDCAN_Start(&hfdcan1);
-//  HAL_FDCAN_Start(&hfdcan2);
- // USBD_CDC_Init(&hUsbDeviceHS,0);
-  ui8LocalMsgBuffernr = 0;
-  ui16IndexRxUsb=0;
-  ui16RxToBeSend=0;
-  ui16TxToBeSend=0;
-
-  InitializationMemory();
-
-  /* Infinite loop */
-  for(;;)
-  {
-
-	  /* Prepare Tx Header */
-	  FixedTxHeader.Identifier = 0x321;
-	  FixedTxHeader.IdType = FDCAN_STANDARD_ID;
-	  FixedTxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	  FixedTxHeader.DataLength = FDCAN_DLC_BYTES_3;
-	  FixedTxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	  FixedTxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-	  FixedTxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-	  FixedTxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-	  FixedTxHeader.MessageMarker = 0;
-    /* Set the data to be transmitted */
-	 FixedTxData[0] = 0xBC;
-	 FixedTxData[1] = 0xAD;
-	 FixedTxData[2] ++;
-
-	 /* Start the Transmission process */
-	 if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FixedTxHeader, FixedTxData) != HAL_OK)
-	 {
-	   /* Transmission request Error */
-	   Error_Handler();
-	 }
-
-#if 0
-	/*Read from CAN messages*/
-	for (ui8LocalMsgBuffernr=0;ui8LocalMsgBuffernr<NumberOfRxBuffers;ui8LocalMsgBuffernr++)
-	{
-		ReadCANMsgByBufferIndex(&hfdcan1,ui8LocalMsgBuffernr);
-		ReadCANMsgByBufferIndex(&hfdcan2,ui8LocalMsgBuffernr);
-	}
-	/*send to USB, frames received from CAN*/
-	if(ui16RxToBeSend!= 0)
-	{
-		for (ui8LocalIndexRxUsB=0;ui8LocalIndexRxUsB<NumberOfRxToSendUsb;ui8LocalIndexRxUsB++)
-		{
-			/*find a valid position in the buffer*/
-			FindNextMsgRx(&ui16IndexRxUsb,1);
-			do
-			{
-				ui8StatusTxUsb = CDC_Transmit_HS((uint8_t*)&sListTxMessage[ui16IndexRxUsb],sizeof(sListTxMessage[ui16IndexRxUsb]));
-
-			}while(ui8StatusTxUsb == USBD_BUSY);
-			/*another message has been send*/
-			if(ui16RxToBeSend>0)
-				ui16RxToBeSend--;
-			sListTxMessage[ui16IndexRxUsb].ui8StateMsg = 0;
-		}
-	}
-#endif
-	if (ui8SetRequestToUsb==1)
-	{
-		for (uint8_t ui8Index=0;ui8Index<3;ui8Index++)
-		{
-			sText[ui8Index +1] = RxData[ui8Index];
-		}
-		CDC_Transmit_HS(&sText,sizeof(sText));
-        GPIOB->ODR ^=0x1;
-	}
-    osDelay(1);
-
-  }
-  /* USER CODE END 5 */ 
-}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
@@ -849,6 +718,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
     HAL_IncTick();
+    ui16MessageTrigger++;
   }
   /* USER CODE BEGIN Callback 1 */
 
@@ -859,11 +729,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
+
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  while(1);
+	if (ui8ErrorTransmisionCAN1 == 1)
+	{
+		ui32CounterTransmisionErrorCAN1++;
+	}
+	else
+	{
+      while(1);
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 

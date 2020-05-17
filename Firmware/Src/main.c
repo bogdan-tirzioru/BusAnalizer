@@ -58,6 +58,7 @@ UART_HandleTypeDef huart1;
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDeviceHS;
+uint8_t ui8SetRequestToUsb =0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -640,7 +641,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
    //   LED_Display(RxData[0]);
    //   ubKeyNumber = RxData[0];
     }
-
+    ui8SetRequestToUsb=1;
     if (HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
     {
       /* Notification Error */
@@ -818,14 +819,17 @@ void StartDefaultTask(void const * argument)
 		}
 	}
 #endif
+	if (ui8SetRequestToUsb==1)
+	{
+		for (uint8_t ui8Index=0;ui8Index<3;ui8Index++)
+		{
+			sText[ui8Index +1] = RxData[ui8Index];
+		}
+		CDC_Transmit_HS(&sText,sizeof(sText));
+        GPIOB->ODR ^=0x1;
+	}
+    osDelay(1);
 
-    for (uint8_t ui8Index=0;ui8Index<3;ui8Index++)
-    {
-    	sText[ui8Index +1] = RxData[ui8Index];
-    }
-    CDC_Transmit_HS(&sText,sizeof(sText));
-    GPIOB->ODR ^=0x1;
-    osDelay(100);
   }
   /* USER CODE END 5 */ 
 }

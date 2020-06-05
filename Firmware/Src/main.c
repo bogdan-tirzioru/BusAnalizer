@@ -86,6 +86,7 @@ uint8_t FixedTxData[8];
 char sText[100];
 uint32_t ui32CounterTransmisionErrorCAN1=0;
 uint8_t ui8ErrorTransmisionCAN1 =0;
+uint8_t ui16MessageTriggerFlag =0;
 /* USER CODE END 0 */
 
 /**
@@ -158,7 +159,7 @@ int main(void)
 	//  HAL_FDCAN_Start(&hfdcan2);
 	// USBD_CDC_Init(&hUsbDeviceHS,0);
 
-
+	ui32CounterTransmisionErrorCAN1 =0;
 
   /* Create the thread(s) */
   /* Infinite loop */
@@ -167,8 +168,9 @@ int main(void)
   {
 
 
-	if((ui16MessageTrigger%1024) == 0)
+	if(ui16MessageTriggerFlag == 1)
 	{
+		ui16MessageTriggerFlag = 0;
 		/* Prepare Tx Header */
 		FixedTxHeader.Identifier = 0x321;
 		FixedTxHeader.IdType = FDCAN_STANDARD_ID;
@@ -185,11 +187,12 @@ int main(void)
 		FixedTxData[2] ++;
 
 		/* Start the Transmission process */
-		if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FixedTxHeader, FixedTxData) != HAL_OK)
+		while (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FixedTxHeader, FixedTxData) != HAL_OK)
 		{
 		/* Transmission request Error */
 		  ui8ErrorTransmisionCAN1 =1;
 		  Error_Handler();
+		  ui8ErrorTransmisionCAN1 =0;
 		}
 	}
 
@@ -719,6 +722,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM1) {
     HAL_IncTick();
     ui16MessageTrigger++;
+    if ((ui16MessageTrigger%1024) == 0)
+    {
+    	ui16MessageTriggerFlag = 1;
+    };
   }
   /* USER CODE BEGIN Callback 1 */
 

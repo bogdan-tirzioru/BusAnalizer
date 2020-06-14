@@ -1,0 +1,917 @@
+<html>
+
+<head>
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<title>CSerialPort v1.42</title>
+<link href="naughter.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+
+<h2>
+<img alt="serialport.gif" border="0" height="38" src="serialport.gif" width="40">CSerialPort 
+v1.42</h2>
+<p>Welcome to CSerialPort / CSerialPort2, two freeware C++ classes to wrap access to the Win32 APIs 
+dealing with serial ports. </p>
+<p>&nbsp;</p>
+<table>
+	<tr>
+		<td><a href="#Features">Features</a></td>
+	</tr>
+	<tr>
+		<td><a href="#Usage">Usage</a></td>
+	</tr>
+	<tr>
+		<td><a href="#Copyright">Copyright</a></td>
+	</tr>
+	<tr>
+		<td><a href="#History">History</a></td>
+	</tr>
+	<tr>
+		<td><a href="#APIReference">API Reference</a></td>
+	</tr>
+	<tr>
+		<td><a href="#Contact">Contacting the Author</a></td>
+	</tr>
+</table>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><a name="Features"></a>Features</h2>
+<ul>
+	<li>Simple and clean C++ interface. </li>
+	<li>The CSerialPort class uses C++ exceptions to indicate errors while 
+	CSerialPort2 exposes return values similiar to the Windows SDK API calls 
+	which it encapsulates. </li>
+	<li>Unicode enabled and all code compiles cleanly at warning level 4 and is /analyze 
+	clean. </li>
+	<li>Supports overlapped, blocking and call-back usage models of the serial port.
+	</li>
+</ul>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><a name="Usage"></a>Usage</h2>
+<ul>
+	<li>To use the classes in your code simply #include serialport.h in which ever of your modules needs to make calls 
+	to the class. </li>
+	<li>As of v1.35, the classes are now designed for VC 2017 or later. They will 
+	not compile on earlier releases of VC.</li>
+	<li>To see the code in action have a look at the module &quot;app.cpp&quot; 
+	in the sample app. </li>
+</ul>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><a name="Copyright"></a>Copyright</h2>
+<ul>
+	<li>You are allowed to include the source code in any product (commercial, shareware, 
+	freeware or otherwise) when your product is released in binary form.</li>
+	<li>You are allowed to modify the source code in any way you want except you 
+	cannot modify the copyright details at the top of each module.</li>
+	<li>If you want to distribute source code with your application, then you are 
+	only allowed to distribute versions released by the author. This is to maintain 
+	a single distribution point for the source code.</li>
+</ul>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><a name="History"></a>History</h2>
+<p><b>v1.42 (12 April 2020)</b></p>
+<ul>
+	<li>Updated copyright details. </li>
+	<li>Fixed more Clang-Tidy static code analysis warnings in the code.</li>
+</ul>
+<p><b>v1.41 (7 November 2019)</b></p>
+<ul>
+	<li>Updated initialization of various structs to use C++ 11 list 
+	initialization </li>
+</ul>
+<p><b>v1.40 (10 September 2019)</b></p>
+<ul>
+	<li>Replaced enum with enum class throughout the code </li>
+	<li>Fixed a number of compiler warnings when the code is compiled with 
+	VS 2019 Preview </li>
+</ul>
+<p><b>v1.39 (21 April 2019)</b></p>
+<ul>
+	<li>Updated the sample app to clean compile on VC 2019 </li>
+	<li>Removed the code path supported by the non defunct 
+	CSERIALPORT_MFC_EXTENSIONS enum </li>
+</ul>
+<p><b>v1.38 (29 January 2019)</b></p>
+<ul>
+	<li>Updated copyright details. </li>
+	<li>Fixed a bug in the two CSerialPort::Open methods where they were 
+	incorrectly defined as having a return value of BOOL instead of the correct 
+	return value of void. Thanks to Boris Usievich for reporting this bug. </li>
+</ul>
+<p><b>v1.37 (21 December 2018)</b></p>
+<ul>
+	<li>Fixed issues in CSerialPort2::Open where sometimes the function would 
+	return FALSE, but would leave the serial port in an open state. Thanks to 
+	&quot;Guan&quot; for reporting this issue.</li>
+</ul>
+<p><b>v1.36 (16 September 2018)</b></p>
+<ul>
+	<li>Fixed a number of compiler warnings when using VS 2017 15.8.4 </li>
+</ul>
+<p><b>v1.35 (1 July 2018)</b></p>
+<ul>
+	<li>Updated copyright details. </li>
+	<li>Fixed a number of C++ core guidelines compiler warnings. These changes 
+	mean that the code will now only compile on VC 2017 or later. </li>
+</ul>
+<p><b>v1.34 (17 December 2017)</b></p>
+<ul>
+	<li>Replaced NULL throughout the codebase with nullptr. This means that the 
+	minimum requirement for the framework is now VC 2010. </li>
+	<li>Updated the code to compile cleanly when _ATL_NO_AUTOMATIC_NAMESPACE is 
+	defined. </li>
+	<li>Provided a CSerialPort::CancelIoEx method which encapsulates the 
+	CancelIoEx API. Thanks to Victor Derks for this suggestion. </li>
+	<li>Fixed code in CSerialPort::GetDefaultConfig as it does not have a 
+	return value. Thanks to Victor Derks for reporting this bug. </li>
+	<li>Fixed code in CSerialPort::SetDefaultConfig as it does not have a return 
+	value. Thanks to Victor Derks for reporting this bug. </li>
+	<li>The sal header file is now included before the fallback SAL macros are 
+	defined in SerialPort.h. Thanks to Victor Derks for reporting this issue. </li>
+	<li>Reworked the code to now be a header only implementation. </li>
+	<li>Provided a new CSerialPort2 class which is a non exception based version 
+	of CSerialPort</li>
+	<li>Provided methods in CSerialPort &amp; CSerialPort2 which encapsulate 
+	the GetOverlappedResultEx API. </li>
+	<li>Provided a new Open method in CSerialPort &amp; CSerialPort2 which 
+	just opens the port without explicit configuration. </li>
+	<li>Provided a new Open method in CSerialPort &amp; CSerialPort2 which 
+	encapsulates the OpenCommPort API. </li>
+</ul>
+<p><b>v1.33 (16 August 2017)</b></p>
+<ul>
+	<li>Updated copyright details. </li>
+	<li>Updated declarations of CSerialException::GetErrorMessage to be consistent 
+	with CException base class implementations </li>
+	<li>Fixed up the SAL annotations on CSerialPort::GetConfig. Thanks to Wang Jinhai 
+	for reporting this issue. </li>
+</ul>
+<p><b>v1.32 (22 May 2016)</b></p>
+<ul>
+	<li>Updated copyright details. </li>
+	<li>Fixed some typos in SerialPort.h, SerialPort.cpp and SerialPort.htm where 
+	CSERIALPORT_MFC_EXTENSTIONS was being used instead of CSERIALPORT_MFC_EXTENSIONS. 
+	Thanks to Nicholas Buse for reporting this issue. </li>
+</ul>
+<p><b>v1.31 (17 December 2015)</b></p>
+<ul>
+	<li>Verified the code compiles cleanly on VC 2015.</li>
+</ul>
+<p><b>v1.30 (26 April 2015)</b></p>
+<ul>
+	<li>Removed unnecessary inclusion of WinError.h </li>
+	<li>Removed the CSerialPort::DataWaiting method as it depends on the port being 
+	open in overlapped mode. Instead client code can simply call CSerialPort::WaitEvent 
+	directly themselves. Removing this method also means that the CSerialPort::m_hEvent 
+	handle has not also been removed. </li>
+	<li>The CSerialPort::WriteEx method has been reworked to expose all the parameters 
+	of the underlying WriteFileEx API. This rework also fixes a memory leak in WriteEx 
+	which can sometimes occur. This reworks also means that the CSerialPort::_OnCompletion 
+	and CSerialPort::_OnCompletion methods have been removed. Thanks to Yufeng Huang 
+	for reporting this issue. </li>
+	<li>The CSerialPort::ReadEx method has been reworked to expose all the parameters 
+	of the underlying ReadFileEx API. This rework also fixes a memory leak in ReadEx 
+	which can sometimes occur. This reworks also means that the CSerialPort::_OnCompletion 
+	and CSerialPort::_OnCompletion methods have been removed. Thanks to Yufeng Huang 
+	for reporting this issue. </li>
+</ul>
+<p><b>v1.29 (28 February 2015)</b></p>
+<ul>
+	<li>Updated sample project settings to more modern default values. </li>
+	<li>Updated copyright details. </li>
+	<li>Reworked the CSerialPort and CSerialPortException classes to optionally 
+	compile without MFC. By default the classes now do not use MFC by default but 
+	if you define CSERIALPORT_MFC_EXTENSIONS the classes will revert back to the 
+	MFC behaviour. </li>
+	<li>Remove logic to use GetProcAddress to access CancelIO functionality.
+	</li>
+	<li>Updated the code to clean compile on VC 2013 </li>
+	<li>Added SAL annotations to all the code </li>
+	<li>Addition of a GetDefaultConfig method which takes a string </li>
+	<li>Addition of a SetDefaultConfig method which takes a string</li>
+</ul>
+<p><b>v1.28 (25 January 2013)</b></p>
+<ul>
+	<li>Updated copyright details. </li>
+	<li>Updated sample app and class to compile cleanly on VC 2010 and later.
+	</li>
+</ul>
+<p><b>v1.27 (4 July 2008)</b></p>
+<ul>
+	<li>Provided a version of the Open method which takes a string instead of a 
+	numeric port number value. This allows the code to support some virtual serial 
+	port packages which do not use device names of the form &quot;COM%d&quot;. Thanks 
+	to David Balazic for suggesting this addition.</li>
+</ul>
+<p><b>v1.26 (21 June 2008)</b></p>
+<ul>
+	<li>Code now compiles cleanly using Code Analysis (/analyze)</li>
+	<li>Updated code to compile correctly using _ATL_CSTRING_EXPLICIT_CONSTRUCTORS 
+	define</li>
+	<li>The code now only supports VC 2005 or later. </li>
+	<li>CSerialPort::Read, Write, GetOverlappedResult &amp; WaitEvent now throw 
+	an exception irrespective of whether the last error is ERROR_IO_PENDING or not</li>
+	<li>Replaced all calls to ZeroMemory with memset</li>
+</ul>
+<p><b>v1.25 (18 May 2008)</b></p>
+<ul>
+	<li>Updated copyright details.</li>
+	<li>Changed the actual values for Parity enum so that they are consistent with 
+	the Parity define values in the Windows SDK header file WinBase.h. This avoids 
+	the potential issue where you use the CSerialPort enum parity values in a call 
+	to the raw Win32 API calls. Thanks to Robert Krueger for reporting this issue.</li>
+</ul>
+<p><b>v1.24 (30 December 2007)</b></p>
+<ul>
+	<li>Updated the sample app to clean compile on VC 2008</li>
+	<li>CSerialException::GetErrorMessage now uses Checked::tcsncpy_s if compiled 
+	using VC 2005 or later.</li>
+</ul>
+<p><b>v1.23 (24 December 2007)</b></p>
+<ul>
+	<li>CSerialException::GetErrorMessage now uses the FORMAT_MESSAGE_IGNORE_INSERTS 
+	flag. For more information please see Raymond Chen's blog at
+	<a href="http://blogs.msdn.com/oldnewthing/archive/2007/11/28/6564257.aspx">
+	http://blogs.msdn.com/oldnewthing/archive/2007/11/28/6564257.aspx</a>. Thanks 
+	to Alexey Kuznetsov for reporting this issue.</li>
+	<li>Simplified the code in CSerialException::GetErrorMessage somewhat.</li>
+	<li>Optimized the CSerialException constructor code.</li>
+	<li>Code now uses newer C++ style casts instead of C style casts.</li>
+	<li>Reviewed and updated all the TRACE logging in the module</li>
+	<li>Replaced all calls to ZeroMemory with memset</li>
+</ul>
+<p><b>v1.22 (25 January 2007)</b></p>
+<ul>
+	<li>Minor update to remove strsafe.h from stdafx.h of the sample app.</li>
+	<li>Updated copyright details.</li>
+</ul>
+<p><b>v1.21 (5 November 2006)</b></p>
+<ul>
+	<li>Minor update to stdafx.h of sample app to avoid compiler warnings in VC 
+	2005.</li>
+	<li>Reverted the use of the strsafe.h header file. Instead now the code uses 
+	the VC 2005 Safe CRT and if this is not available, then we fail back to the 
+	standard CRT.</li>
+</ul>
+<p><b>v1.20 (25 June 2006)</b></p>
+<ul>
+	<li>Combined the functionality of the CSerialPortData class into the main CSerialPort 
+	class.</li>
+	<li>Renamed AfxThrowSerialPortException to ThrowSerialPortException and made 
+	the method public.</li>
+</ul>
+<p><b>v1.19 (24 June 2006)</b></p>
+<ul>
+	<li>Fixed some typos in the history list. Thanks to Simon Wong for reporting 
+	this.</li>
+	<li>Made the class which handles the construction of function pointers at runtime 
+	a member variable of CSerialPort</li>
+	<li>Made AfxThrowSerialPortException part of the CSerialPort class. Thanks to 
+	Simon Wong for reporting this.</li>
+	<li>Removed the unnecessary CSerialException destructor. Thanks to Simon Wong 
+	for reporting this.</li>
+	<li>Fixed a minor error in the TRACE text in CSerialPort::SetDefaultConfig. 
+	Again thanks to Simon Wong for reporting this. </li>
+	<li>Code now uses new C++ style casts rather than old style C casts where necessary. 
+	Again thanks to Simon Wong for reporting this.</li>
+	<li>CSerialException::GetErrorMessage now uses the strsafe functions. This does 
+	mean that the code now requires the Platform SDK if compiled using VC 6.</li>
+</ul>
+<p><b>v1.18 (5 June 2006)</b></p>
+<ul>
+	<li>Fixed an issue with the creation of the internal event object. It was incorrectly 
+	being created as an auto-reset event object instead of a manual reset event 
+	object. Thanks to Sasho Darmonski for reporting this issue.</li>
+</ul>
+<p><b>v1.17 (2 June 2006)</b></p>
+<ul>
+	<li>Removed the bOverlapped as a member variable from the class. There was no 
+	real need for this setting, since the SDK functions will perform their own checking 
+	of how overlapped operations should </li>
+	<li>Fixed a bug in GetOverlappedResult where the code incorrectly checking against 
+	the error ERROR_IO_PENDING instead of ERROR_IO_INCOMPLETE. Thanks to Sasho Darmonski 
+	for reporting this bug.</li>
+	<li>Reviewed all TRACE statements for correctness.</li>
+</ul>
+<p><b>v1.16 (10 April 2006)</b></p>
+<ul>
+	<li>Updated copyright details.</li>
+	<li>Addition of a CSERIALPORT_EXT_CLASS and CSERIALPORT_EXT_API macros which 
+	makes the class easier to use in an extension dll.</li>
+	<li>Removed derivation of CSerialPort from CObject as it was not really needed.</li>
+	<li>Fixed a number of level 4 warnings in the sample app.</li>
+	<li>Reworked the overlapped IO methods to expose the LPOVERLAPPED structure 
+	to client code.</li>
+	<li>Updated the documentation to use the same style as the web site.</li>
+	<li>Did a spell check of the HTML documentation.</li>
+	<li>Updated the documentation on possible blocking in Read/Ex function. Thanks 
+	to D Kerrison for reporting this issue.</li>
+	<li>Fixed a minor issue in the sample app when the code is compiled using /Wp64</li>
+</ul>
+<p><b>5 March 2003</b></p>
+<ul>
+	<li>Updated the documentation for the function CSerialPort::GetStatus.</li>
+</ul>
+<p><b>V1.15 (20 September 2002)</b></p>
+<ul>
+	<li>Addition of an additional ASSERT in the internal _OnCompletion function.</li>
+	<li>Addition of an optional out parameter to the Write method which operates 
+	in overlapped mode. Thanks to Kevin Pinkerton for this addition.</li>
+</ul>
+<p><b>V1.14 (7 August 2002)</b></p>
+<ul>
+	<li>Changed the declaration of CSerialPort::WaitEvent to be consistent with 
+	the rest of the methods in CSerialPort which can operate in &quot;OVERLAPPED&quot; 
+	mode. A note about the usage of this: If the method succeeds then the overlapped 
+	operation has completed synchronously and there is no need to do a WaitForSingle/MultipleObjects. 
+	If any other unexpected error occurs then a CSerialException will be thrown. 
+	See the implementation of the CSerialPort::DataWaiting which has been rewritten 
+	to use this new design pattern. Thanks to Serhiy Pavlov for spotting this inconsistency.</li>
+</ul>
+<p><b>V1.13 (29 May 2002)</b></p>
+<ul>
+	<li>Fixed an problem where the GetProcAddress for CancelIO was using the wrong 
+	calling convention.</li>
+</ul>
+<p><b>V1.12 (1 May 2002)</b></p>
+<ul>
+	<li>Fixed a problem in Open method which was failing to initialize the DCB structure 
+	incorrectly, when calling GetState. Thanks to Ben Newson for this fix.</li>
+</ul>
+<p><b>V1.11 (23 April 2001)</b></p>
+<ul>
+	<li>Fixed a memory leak in DataWaiting method.</li>
+</ul>
+<p><b>V1.10 (4 April 2001)</b></p>
+<ul>
+	<li>Provided an overridden version of BytesWaiting which specifies a timeout.</li>
+</ul>
+<p><b>V1.09 (24 March 2001)</b></p>
+<ul>
+	<li>Added a BytesWaiting method</li>
+</ul>
+<p><b>V1.08 (15 January 2001)</b></p>
+<ul>
+	<li>Attach method now also allows you to specify whether the serial port is 
+	being attached to in overlapped mode</li>
+	<li>Removed some ASSERTs which were unnecessary in some of the functions</li>
+	<li>Updated the Read method which uses OVERLAPPED IO to also return the bytes 
+	read. This allows calls to WriteFile with a zeroed overlapped structure (This 
+	is required when dealing with TAPI and serial communications)</li>
+	<li>Now includes copyright message in the source code and documentation.</li>
+</ul>
+<p><b>V1.07 (10 December 2000)</b></p>
+<ul>
+	<li>Made class destructor virtual.</li>
+</ul>
+<p><b>3 July 2000</b> </p>
+<ul>
+	<li>Minor update to the documentation.</li>
+</ul>
+<p><b>V1.06 (12 June 2000)</b></p>
+<ul>
+	<li>Fixed another unreferenced variable problem in CSerialPortApp::InitInstance 
+	in VC 6.</li>
+</ul>
+<p><b>V1.05 (8 May 2000)</b></p>
+<ul>
+	<li>Fixed an unreferenced variable in CSerialPort::GetOverlappedResult in VC 
+	6</li>
+</ul>
+<p><b>V1.04 (8 March 2000)</b></p>
+<ul>
+	<li>Links in the documentation now work &lt;g&gt;.</li>
+</ul>
+<p><b>V1.03 (29 September 1999)</b></p>
+<ul>
+	<li>Fixed a simple copy and paste bug in CSerialPort::SetDTR</li>
+</ul>
+<p><b>V1.02 (16 June 1999)</b></p>
+<ul>
+	<li>Fixed a bug whereby CString::ReleaseBuffer was not being called in CSerialException::GetErrorMessage</li>
+</ul>
+<p><b>V1.01 (3 June 1999)</b></p>
+<ul>
+	<li>Fixed problem with code using CancelIo function which does not exist on 
+	95.</li>
+	<li>Fixed leaks which can occur in sample app when an exception is thrown</li>
+</ul>
+<p><b>V1.0 (31 May 1999)</b></p>
+<ul>
+	<li>Initial public release. </li>
+</ul>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><a name="APIReference"></a><b>API Reference</b></h2>
+<p>The API consists of the classes: CSerialException, CSerialPort and 
+the non exception based CSerialPort2. 
+The CSerialException and CSerialPort classes have the following member functions and variables:</p>
+<p><b><a href="#CSerialException">CSerialException::CSerialException</a><br>
+<a href="#GetErrorMessage">CSerialException::GetErrorMessage</a><br>
+<a href="#m_dwError">CSerialException::m_dwError</a><br><a href="#CSerialPort">CSerialPort::CSerialPort</a><br>
+<a href="#~CSerialPort">CSerialPort::~CSerialPort</a><br><a href="#Open">CSerialPort::Open</a><br>
+<a href="#Close">CSerialPort::Close</a><br><a href="#Attach">CSerialPort::Attach</a><br>
+<a href="#Detach">CSerialPort::Detach</a><br><a href="#operator HANDLE">CSerialPort::operator 
+HANDLE</a><br><a href="#IsOpen">CSerialPort::IsOpen</a><br><a href="#Dump">CSerialPort::Dump</a><br>
+<a href="#Read">CSerialPort::Read</a><br><a href="#Read">CSerialPort::ReadEx</a><br>
+<a href="#Write">CSerialPort::Write</a><br><a href="#Write">CSerialPort::WriteEx</a><br>
+<a href="#TransmitChar">CSerialPort::TransmitChar</a><br>
+<a href="#GetOverlappedResult">CSerialPort::GetOverlappedResult</a><br>
+<a href="#CancelIo">CSerialPort::CancelIo</a><br><a href="#CancelIoEx">
+CSerialPort::CancelIoEx</a><br><a href="#GetConfig">CSerialPort::GetConfig</a><br>
+<a href="#GetDefaultConfig">CSerialPort::GetDefaultConfig</a><br>
+<a href="#SetConfig">CSerialPort::SetConfig</a><br><a href="#SetDefaultConfig">CSerialPort::SetDefaultConfig</a><br>
+<a href="#ClearBreak">CSerialPort::ClearBreak</a><br><a href="#SetBreak">CSerialPort::SetBreak</a><br>
+<a href="#ClearError">CSerialPort::ClearError</a><br><a href="#GetStatus">CSerialPort::GetStatus</a><br>
+<a href="#GetState">CSerialPort::GetState</a><br><a href="#SetState">CSerialPort::SetState</a><br>
+<a href="#Escape">CSerialPort::Escape</a><br><a href="#ClearDTR">CSerialPort::ClearDTR</a><br>
+<a href="#ClearRTS">CSerialPort::ClearRTS</a><br><a href="#SetDTR">CSerialPort::SetDTR</a><br>
+<a href="#SetRTS">CSerialPort::SetRTS</a><br><a href="#SetXOFF">CSerialPort::SetXOFF</a><br>
+<a href="#SetXON">CSerialPort::SetXON</a><br><a href="#GetProperties">CSerialPort::GetProperties</a><br>
+<a href="#GetModemStatus">CSerialPort::GetModemStatus</a><br>
+<a href="#SetTimeouts">CSerialPort::SetTimeouts</a><br><a href="#GetTimeouts">CSerialPort::GetTimeouts</a><br>
+<a href="#Set0Timeout">CSerialPort::Set0Timeout</a><br>
+<a href="#Set0WriteTimeout">CSerialPort::Set0WriteTimeout</a><br>
+<a href="#Set0ReadTimeout">CSerialPort::Set0ReadTimeout</a><br>
+<a href="#SetMask">CSerialPort::SetMask</a><br><a href="#GetMask">CSerialPort::GetMask</a><br>
+<a href="#WaitEvent">CSerialPort::WaitEvent</a><br><a href="#Flush">CSerialPort::Flush</a><br>
+<a href="#Purge">CSerialPort::Purge</a><br>
+<a href="#TerminateOutstandingWrites">CSerialPort::TerminateOutstandingWrites</a><br>
+<a href="#TerminateOutstandingReads">CSerialPort::TerminateOutstandingReads</a><br>
+<a href="#ClearWriteBuffer">CSerialPort::ClearWriteBuffer</a><br>
+<a href="#ClearReadBuffer">CSerialPort::ClearReadBuffer</a><br><a href="#Setup">
+CSerialPort::Setup</a><br><a href="#BytesWaiting">CSerialPort::BytesWaiting</a>
+</b></p>
+<p>&nbsp;</p>
+<p><b><a name="CSerialException"></a>CSerialException::CSerialException</b></p>
+<p><b>CSerialException(DWORD </b><i>dwError</i><b><i> </i>= 0);</b></p>
+<p><b>Parameters</b></p>
+<p><i>dwError</i>&nbsp;&nbsp;&nbsp;The error that caused the exception.</p>
+<p><b>Remarks</b></p>
+<p>This member function is called when a CSerialException object is created. To 
+throw a CSerialException, call the method CSerialPort::ThrowSerialException. 
+If you call if using the default value for dwError, then internally it will call 
+GetLastError for you.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetErrorMessage"></a>CSerialException::GetErrorMessage</b></p>
+<p><b>virtual BOOL GetErrorMessage(LPTSTR </b><i>lpszError</i><b>, UINT </b><i>nMaxError</i><b>, 
+PUINT </b><i>pnHelpContext</i><i> </i><b>= nullptr);<br>Return Value</b></p>
+<p>Nonzero if the function is successful; otherwise 0 if no error message text 
+is available.</p>
+<p><b>Parameters</b></p>
+<p><i>lpszError</i>&nbsp;A pointer to a buffer that will receive an error message.</p>
+<p><i>nMaxError</i>&nbsp;The maximum number of characters the buffer can hold, including 
+the null terminator.</p>
+<p><i>pnHelpContext&nbsp;</i>The address of a UINT that will receive the help context 
+ID. If null, no ID will be returned.</p>
+<p><b>Remarks</b></p>
+<p>Call this member function to provide text about an error that has occurred. Note 
+this method is only available if you enable MFC integration via CSERIALPORT_MFC_EXTENSIONS.</p>
+<p>&nbsp;</p>
+<p><b><a name="m_dwError"></a>CSerialException::m_dwError</b></p>
+<p><b>Remarks</b></p>
+<p>The error that caused the exception. This error value is a system error code 
+as found in WinError.h.</p>
+<p>For a list of Win32 error codes, see Error Codes in the Win32 SDK.</p>
+<p>&nbsp;</p>
+<p><b><a name="CSerialPort"></a>CSerialPort::CSerialPort</b></p>
+<p><b>CSerialPort();</b></p>
+<p><b>Remarks</b></p>
+<p>Standard C++ constructor for the class. Internally it just sets up the member 
+variables to default values.</p>
+<p>&nbsp;</p>
+<p><b><a name="~CSerialPort"></a>CSerialPort::~CSerialPort</b></p>
+<p><b>virtual ~CSerialPort();</b></p>
+<p><b>Remarks</b></p>
+<p>Standard C++ destructor for the class. It will ensure that the comm port is closed 
+if it is open.</p>
+<p>&nbsp;</p>
+<p><b><a name="Open"></a>CSerialPort::Open</b></p>
+<p><b>void Open(LPCTSTR </b><em>pszPort</em><b>, BOOL </b><i>bOverlapped</i><b> = FALSE);<br>void Open(LPCTSTR </b>
+<em>pszPort</em>,<b> DWORD </b><i>dwBaud<b> </b></i><b>= 9600, 
+Parity </b><i>parity<b> </b></i><b>= NoParity, BYTE </b><i>DataBits<b> </b></i>
+<b>= 8, StopBits </b><i>stopBits<b> </b></i><b>= OneStopBit, FlowControl </b><i>
+fc</i><b> = NoFlowControl, BOOL </b><i>bOverlapped</i><b> = FALSE);<br>void Open(int
+</b><i>nPort</i>,<b> DWORD </b><i>dwBaud<b> </b></i><b>= 9600, Parity </b><i>parity<b>
+</b></i><b>= NoParity, BYTE </b><i>DataBits<b> </b></i><b>= 8, StopBits </b><i>stopBits<b>
+</b></i><b>= OneStopBit, FlowControl </b><i>fc</i><b> = NoFlowControl, BOOL </b>
+<i>bOverlapped</i><b> = FALSE);<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; );</b></p>
+<p><b>Parameters</b></p>
+<p><i>nPort</i>&nbsp;&nbsp;&nbsp;The communications port to open.</p>
+<p><i>pszPort</i> The name of the communications port to open. Note you would use 
+this version of the Open method if the serial port does not have a name of type &quot;COM%d&quot;.</p>
+<p><i>dwBaud</i> The baud rate to use</p>
+<p><i>parity</i> The parity to use. parity is an enum with the following values:</p>
+<p>enum Parity<br>{ <br>EvenParity,<br>MarkParity,<br>NoParity,<br>OddParity,<br>
+SpaceParity<br>};</p>
+<p><i>Databits</i> The number of data bits to use</p>
+<p><i>stopbits</i> The number of stop bits to use. stopbits is an enum with the 
+following values:</p>
+<p>enum StopBits<br>{<br>OneStopBit,<br>OnePointFiveStopBits,<br>TwoStopBits<br>
+}; </p>
+<p><i>fc</i> The flow control method to use. fc is an enum with the following values:</p>
+<p>enum FlowControl<br>{<br>NoFlowControl,<br>CtsRtsFlowControl,<br>CtsDtrFlowControl,<br>
+DsrRtsFlowControl,<br>DsrDtrFlowControl,<br>XonXoffFlowControl<br>}; </p>
+<p><i>bOverlapped</i> TRUE if you want to open in overlapped mode, otherwise FALSE 
+to use blocking calls.</p>
+<p><b>Remarks</b></p>
+<p>Call this member function to open a communications port. Internally the class 
+will use CreateFile to open the comm port (handling the case where the port number 
+if greater than 9) and then uses SetState to set the various RS-232 settings as 
+specified via the function parameters. If an error occurs, a CSerialException will 
+be thrown.</p>
+<p>&nbsp;</p>
+<p><b><a name="Close"></a>CSerialPort::Close</b></p>
+<p><b>Close();</b></p>
+<p><b>Remarks</b></p>
+<p>The corollary function to Open. Just closes the comm port if already open.</p>
+<p>&nbsp;</p>
+<p><b><a name="Attach"></a>CSerialPort::Attach</b></p>
+<p><b>void Attach(HANDLE </b><i>hComm</i><b>);</b></p>
+<p><b>Parameters</b></p>
+<p><i>hComm</i>&nbsp;&nbsp;&nbsp;The SDK handle of the open comm port.</p>
+<p><b>Remarks</b></p>
+<p>Allows you to attach a CSerialPort instance to an existing SDK comm port handle. 
+This function is similar in behaviour to the CWnd::Attach function provided in MFC.</p>
+<p>&nbsp;</p>
+<p><b><a name="Detach"></a>CSerialPort::Detach</b></p>
+<p><b>HANDLE Detach();</b></p>
+<p><b>Return Value</b></p>
+<p>The SDK comm port HANDLE.</p>
+<p><b>Remarks</b></p>
+<p>Corollary function to Attach. This function is similar in behaviour to the CWnd::Detach 
+function provided in MFC.</p>
+<p>&nbsp;</p>
+<p><b><a name="operator HANDLE"></a>CSerialPort::operator HANDLE</b></p>
+<p><b>operator HANDLE();</b></p>
+<p><b>Return Value</b></p>
+<p>The SDK comm port HANDLE.</p>
+<p><b>Remarks</b></p>
+<p>Use this operator to get the handle of the underlying comm port. You can use 
+this handle to call the Windows APIs directly.</p>
+<p>&nbsp;</p>
+<p><b><a name="IsOpen"></a>CSerialPort::IsOpen</b></p>
+<p><b>BOOL IsOpen() const</b></p>
+<p><b>Return Value</b></p>
+<p>TRUE if the comm port is open otherwise FALSE</p>
+<p>&nbsp;</p>
+<p><b><a name="Dump"></a>CSerialPort::Dump</b></p>
+<p><b>void Dump(CDumpContext&amp; <i>dc</i>) const</b></p>
+<p><b>Remarks</b></p>
+<p>Standard MFC diagnostic support function</p>
+<p>&nbsp;</p>
+<p><b><a name="Read"></a>CSerialPort::Read \ ReadEx</b></p>
+<p><b>DWORD Read(void* </b><i>lpBuffer</i><b>, DWORD </b><i>dwNumberOfBytesToRead</i><b>);<br>
+void Read(void* </b><i>lpBuffer</i><b>, DWORD </b><i>dwCount</i><b>, OVERLAPPED&amp;
+</b><i>overlapped<b>, </b></i><b>DWORD* </b>lpNumberOf<i>BytesRead<b> </b></i>
+<b>= nullptr);<br>void ReadEx(void* </b><i>lpBuffer</i><b>, DWORD </b><i>dwNumberOfBytesToRead</i><b>, 
+LPOVERLAPPED </b><em>lpOverlapped</em><b>, LPOVERLAPPED_COMPLETION_ROUTINE </b>
+<em>lpCompletionRoutine</em><b>);<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; );</b></p>
+<p><b>Return Value</b></p>
+<p>1) The number of bytes read.</p>
+<p>2) &amp; 3) No return value</p>
+<p><b>Parameters</b></p>
+<p><i>lpBuffer</i>&nbsp;&nbsp;Points to the buffer to read the data into from the 
+serial port</p>
+<p><i>dwNumberOfBytesToRead</i>&nbsp; Specifies the number of bytes to read from 
+the serial port.</p>
+<p><i>overlapped</i>&nbsp; reference to an OVERLAPPED structure. This is required 
+if the port was opened in overlapped mode.</p>
+<p><i>lpNumberOfBytesRead</i> If the value is non-null then upon return it will 
+contain the number of bytes read</p>
+<p>lpOverlapped&nbsp; pointer to the OVERLAPPEDpped structure to use</p>
+<p>lpCompletionRoutine&nbsp; the completion routine to use</p>
+<p><b>Remarks</b></p>
+<p>These 3 functions are wrappers for the SDK calls ReadFile and ReadFileEx. Also 
+please note that depending on the way you have configured timeouts, this function 
+may appear to block while it waits to receive the specified data. To configure timeouts, 
+please check out the Set*Timeout(s) functions.</p>
+<p>&nbsp;</p>
+<p><b><a name="Write"></a>CSerialPort::Write \ WriteEx</b></p>
+<p><b>DWORD Write(const void* </b><i>lpBuffer</i><b>, DWORD </b><i>dwNumberOfBytesToWrite</i><b>);<br>
+void Write(const void* </b><i>lpBuffer</i>,<b> DWORD </b><i>dwNumberOfBytesToWrite</i><b>, 
+OVERLAPPED&amp; </b><i>overlapped<b>, </b></i><b>DWORD* </b><i>lpNumberOfBytesWritten<b>
+</b></i><b>= nullptr);<br>void WriteEx(const void* </b><i>lpBuffer</i><b>, DWORD
+</b><i>dwNumberOfBytesToWrite</i><b>, LPOVERLAPPED </b><em>lpOverlapped</em><b>, 
+LPOVERLAPPED_COMPLETION_ROUTINE </b><em>lpCompletionRoutine</em><b>);<br>&nbsp;&nbsp;&nbsp; 
+throw( CSerialException&amp; );</b></p>
+<p><b>Return Value</b></p>
+<p>1) The number of bytes written.</p>
+<p>2) &amp; 3) No return value</p>
+<p><b>Parameters</b></p>
+<p><i>lpBuffer</i>&nbsp;&nbsp;Points to the buffer containing the data to be written 
+to the serial port</p>
+<p><i>dwNumberOfBytesToWrite</i>&nbsp;&nbsp;Specifies the number of bytes to write 
+to the serial port.</p>
+<p><i>overlapped</i>&nbsp;&nbsp;reference to an OVERLAPPED structure. This is required 
+if the port was opened in overlapped mode.</p>
+<p><i>lpNumberOfBytesWritten</i> If the value is non-null then upon return it will 
+contain the number of bytes written</p>
+<p>lpOverlapped&nbsp; pointer to the OVERLAPPEDpped structure to use</p>
+<p>lpCompletionRoutine&nbsp; the completion routine to use</p>
+<p><b>Remarks</b></p>
+<p>These 3 functions are wrappers for the SDK calls WriteFile and WriteFileEx.</p>
+<p>&nbsp;</p>
+<p><b><a name="TransmitChar"></a>CSerialPort::TransmitChar</b></p>
+<p><b>void TransmitChar(char </b><i>cChar</i><b>) const<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the TransmitCommChar SDK function call. See the Win32 SDK 
+documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetOverlappedResult"></a>CSerialPort::GetOverlappedResult</b></p>
+<p><b>void GetOverlappedResult(OVERLAPPED&amp; </b><i>overlapped</i><b>, DWORD&amp;
+</b><i>dwBytesTransferred</i><b>, BOOL </b><i>bWait</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetOverlappedResult SDK function call. See the Win32 SDK 
+documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="CancelIo"></a>CSerialPort::CancelIo</b></p>
+<p><b>void CancelIo()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the CancelIo SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="CancelIoEx"></a>CSerialPort::CancelIoEx</b></p>
+<p><b>void CancelIoEx(_In_opt_ LPOVERLAPPED </b><em>lpOverlapped</em> = nullptr<b>)<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the CancelIoEx SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p><b><a name="GetConfig"></a>CSerialPort::GetConfig</b></p>
+<p><b>void GetConfig(COMMCONFIG&amp; </b><i>config</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetCommConfig SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetDefaultConfig"></a>CSerialPort::GetDefaultConfig</b></p>
+<p><b>static void GetDefaultConfig(int </b><i>nPort</i><b>, COMMCONFIG&amp; </b>
+<i>config</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( CSerialException&amp; 
+);</b></p>
+<p><b>static void GetDefaultConfig(LPCTSTR </b><i>pszPort</i><b>, COMMCONFIG&amp;
+</b><i>config</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( CSerialException&amp; 
+);</b></p>
+<p>Remarks</p>
+<p>Simple wrapper for the GetDefaultCommConfig SDK function call. See the Win32 
+SDK documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetConfig"></a>CSerialPort::SetConfig</b></p>
+<p><b>void SetConfig(COMMCONFIG&amp; </b><i>config</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetCommConfig SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetDefaultConfig"></a>CSerialPort::SetDefaultConfig</b></p>
+<p><b>static void SetDefaultConfig(int </b><i>nPort</i><b>, COMMCONFIG&amp; </b>
+<i>config</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( CSerialException&amp; 
+);</b></p>
+<p><b>static void SetDefaultConfig(LPCTSTR </b><i>pszPort</i><b>, COMMCONFIG&amp;
+</b><i>config</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetDefaultCommConfig SDK function call. See the Win32 
+SDK documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="ClearBreak"></a>CSerialPort::ClearBreak</b></p>
+<p><b>void ClearBreak()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the ClearCommBreak SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetBreak"></a>CSerialPort::SetBreak</b></p>
+<p><b>void SetBreak()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetCommBreak SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="ClearError"></a>CSerialPort::ClearError</b></p>
+<p><b>void ClearError(DWORD&amp; </b><i>dwErrors</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the ClearCommError SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetStatus"></a>CSerialPort::GetStatus</b></p>
+<p><b>void GetStatus(COMMSTAT&amp; </b><i>stat</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Another way of returning information which the SDK call ClearCommError returns. 
+See the Win32 SDK documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetState"></a>CSerialPort::GetState</b></p>
+<p><b>void GetState(DCB&amp; </b><i>dcb</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( 
+CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetCommState SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetState"></a>CSerialPort::SetState</b></p>
+<p><b>void SetState(DCB&amp; </b><i>dcb</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( 
+CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetCommState SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="Escape"></a>CSerialPort::Escape</b></p>
+<p><b>void Escape(DWORD </b><i>dwFunc</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( 
+CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the EscapeCommFunction SDK function call. See the Win32 SDK 
+documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="ClearDTR"></a>CSerialPort::ClearDTR</b></p>
+<p><b>void ClearDTR()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Escape function using the constant CLRDTR which lowers the DTR line.</p>
+<p>&nbsp;</p>
+<p><b><a name="ClearRTS"></a>CSerialPort::ClearRTS</b></p>
+<p><b>void ClearRTS()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Escape function using the constant CLRRTS which lowers the RTS line.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetDTR"></a>CSerialPort::SetDTR</b></p>
+<p><b>void SetDTR()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Escape function using the constant SETDTR which raises the DTR line.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetRTS"></a>CSerialPort::SetRTS</b></p>
+<p><b>void SetRTS()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Escape function using the constant SETRTS which raises the RTS line.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetXOFF"></a>CSerialPort::SetXOFF</b></p>
+<p><b>void SetXOFF()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Escape function using the constant SETXOFF which causes transmission 
+to act as if an XOFF character has been received.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetXON"></a>CSerialPort::SetXON</b></p>
+<p><b>void SetXON()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Escape function using the constant SETXON which causes transmission 
+to act as if an XON character has been received.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetProperties"></a>CSerialPort::GetProperties</b></p>
+<p><b>void GetProperties(COMMPROP&amp; </b><i>properties</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetCommProperties SDK function call. See the Win32 SDK 
+documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetModemStatus"></a>CSerialPort::GetModemStatus</b></p>
+<p><b>void GetModemStatus(DWORD&amp; </b><i>dwModemStatus</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetCommModemStatus SDK function call. See the Win32 SDK 
+documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetTimeouts"></a>CSerialPort::SetTimeouts</b></p>
+<p><b>void SetTimeouts(COMMTIMEOUTS&amp; </b><i>timeouts</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetCommTimeouts SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetTimeouts"></a>CSerialPort::GetTimeouts</b></p>
+<p><b>void GetTimeouts(COMMTIMEOUTS&amp; </b><i>timeouts</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetCommTimeouts SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="Set0Timeout"></a>CSerialPort::Set0Timeout</b></p>
+<p><b>void Set0Timeout()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Configure both send and receive timeouts to be 0. This cause writes to return 
+immediately and for reads to return with whatever data is waiting in the receive 
+buffer rather than wait for the specified amount of bytes to arrive.</p>
+<p>&nbsp;</p>
+<p><b><a name="Set0WriteTimeout"></a>CSerialPort::Set0WriteTimeout</b></p>
+<p><b>void Set0WriteTimeout()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Configures the send timeouts to be 0. This cause writes to return immediately.</p>
+<p>&nbsp;</p>
+<p><b><a name="Set0ReadTimeout"></a>CSerialPort::Set0ReadTimeout</b></p>
+<p><b>void Set0ReadTimeout()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Configure the receive timeout to be 0. This cause reads to return with whatever 
+data is waiting in the receive buffer rather than wait for the specified amount 
+of bytes to arrive.</p>
+<p>&nbsp;</p>
+<p><b><a name="SetMask"></a>CSerialPort::SetMask</b></p>
+<p><b>void SetMask(DWORD </b><i>dwMask</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( 
+CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetCommMask SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="GetMask"></a>CSerialPort::GetMask</b></p>
+<p><b>void GetMask(DWORD&amp; </b><i>dwMask</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>
+throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the GetCommMask SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="WaitEvent"></a>CSerialPort::WaitEvent</b></p>
+<p><b>void WaitEvent(DWORD&amp; </b><i>dwMask</i><b>)<br>BOOL WaitEvent(DWORD&amp;
+</b><i>dwMask</i><b>, OVERLAPPED&amp; </b><i>overlapped</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Return Value</b></p>
+<p>TRUE if the overlapped read completely synchronously, FALSE if the operation 
+is to be completed asynchronously.</p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the WaitCommEvent SDK function call. The second version of 
+WaitEvent is the overlapped version which will return immediately and you can wait 
+for the manual reset event member of the OVERLAPPED structure to become signalled 
+in your code. See the Win32 SDK documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="Flush"></a>CSerialPort::Flush</b></p>
+<p><b>void Flush()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the FlushFileBuffers SDK function call. See the Win32 SDK 
+documentation for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="Purge"></a>CSerialPort::Purge</b></p>
+<p><b>void Purge(DWORD </b><i>dwFlags</i><b>)<br>&nbsp;&nbsp;&nbsp;</b> <b>throw( 
+CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the PurgeComm SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="TerminateOutstandingWrites"></a>CSerialPort::TerminateOutstandingWrites</b></p>
+<p><b>void TerminateOutstandingWrites()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Purge function using the constant PURGE_TXABORT which terminates all 
+outstanding write operations and returns immediately, even if the write operations 
+have not been completed.</p>
+<p>&nbsp;</p>
+<p><b><a name="TerminateOutstandingReads"></a>CSerialPort::TerminateOutstandingReads</b></p>
+<p><b>void TerminateOutstandingReads()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Purge function using the constant PURGE_RXABORT which terminates all 
+outstanding read operations and returns immediately, even if the read operations 
+have not been completed.</p>
+<p>&nbsp;</p>
+<p><b><a name="ClearWriteBuffer"></a>CSerialPort::ClearWriteBuffer</b></p>
+<p><b>void ClearWriteBuffer()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Purge function using the constant PURGE_TXCLEAR which clears the output 
+buffer (if the device driver has one)..</p>
+<p></p>
+<p><b><a name="ClearReadBuffer"></a>CSerialPort::ClearReadBuffer</b></p>
+<p><b>void ClearReadBuffer()<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Remarks</b></p>
+<p>Calls the Purge function using the constant PURGE_RXCLEAR which clears the input 
+buffer (if the device driver has one)..</p>
+<p>&nbsp;</p>
+<p><b><a name="Setup"></a>CSerialPort::Setup</b></p>
+<p><b>void Setup(DWORD </b><i>dwInQueue<b>, </b></i><b>DWORD </b><i>dwOutQueue</i><b>)<br>&nbsp;&nbsp;&nbsp;</b>
+<b>throw( CSerialException&amp; );</b></p>
+<p><b>Remarks</b></p>
+<p>Simple wrapper for the SetupComm SDK function call. See the Win32 SDK documentation 
+for further details.</p>
+<p>&nbsp;</p>
+<p><b><a name="BytesWaiting"></a>CSerialPort::BytesWaiting</b></p>
+<p><b>DWORD BytesWaiting();<br>&nbsp;&nbsp;&nbsp; throw( CSerialException&amp; 
+);</b></p>
+<p><b>Return Value</b></p>
+<p>The number of bytes waiting to be read from the serial port</p>
+<p><b>Remarks</b></p>
+<p>The function returns the number of bytes waiting to be read from the serial port</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><a name="Contact"></a>Contacting the Author</h2>
+<p>PJ Naughter<br>Email: <a href="mailto:pjna@naughter.com">pjna@naughter.com</a><br>
+Web: <a href="http://www.naughter.com">http://www.naughter.com</a><br>12 April 2020</p>
+
+</body>
+
+</html>

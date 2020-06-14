@@ -540,7 +540,7 @@ __if_exists(OpenCommPort)
     return m_hComm;
   }
 
-  _NODISCARD BOOL IsOpen() const noexcept
+  [[nodiscard]] BOOL IsOpen() const noexcept
   {
     return m_hComm != INVALID_HANDLE_VALUE;
   }

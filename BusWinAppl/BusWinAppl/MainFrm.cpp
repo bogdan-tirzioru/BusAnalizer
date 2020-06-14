@@ -423,43 +423,43 @@ void CMainFrame:: OneShoutRead()
 #pragma warning(suppress: 26477)
 		ATLASSERT(hEvent != nullptr);
 		overlapped.hEvent = hEvent;
-
-		try
-		{
-#pragma warning(suppress: 26472 26486)
-			port2.Write(buf.data(), static_cast<DWORD>(buf.size()), overlapped);
-		}
-#pragma warning(suppress: 26496)
-		catch (CSerialException& e)
-		{
-			if (e.m_dwError == ERROR_IO_PENDING)
-			{
-				DWORD dwBytesTransferred = 0;
-				port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
-			}
-			else
-			{
-				CSerialPort::ThrowSerialException(e.m_dwError);
-			}
-		}
-		try
-		{
-			port2.Read(buf.data(), 10, overlapped);
-		}
-#pragma warning(suppress: 26496)
-		catch (CSerialException& e)
-		{
-			if (e.m_dwError == ERROR_IO_PENDING)
-			{
-				DWORD dwBytesTransferred = 0;
-				port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
-			}
-			else
-			{
-				CSerialPort::ThrowSerialException(e.m_dwError);
-			}
-		}
-
+//
+//		try
+//		{
+//#pragma warning(suppress: 26472 26486)
+//			port2.Write(buf.data(), static_cast<DWORD>(buf.size()), overlapped);
+//		}
+//#pragma warning(suppress: 26496)
+//		catch (CSerialException& e)
+//		{
+//			if (e.m_dwError == ERROR_IO_PENDING)
+//			{
+//				DWORD dwBytesTransferred = 0;
+//				port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
+//			}
+//			else
+//			{
+//				CSerialPort::ThrowSerialException(e.m_dwError);
+//			}
+//		}
+//		try
+//		{
+//			port2.Read(buf.data(), 10, overlapped);
+//		}
+//#pragma warning(suppress: 26496)
+//		catch (CSerialException& e)
+//		{
+//			if (e.m_dwError == ERROR_IO_PENDING)
+//			{
+//				DWORD dwBytesTransferred = 0;
+//				port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
+//			}
+//			else
+//			{
+//				CSerialPort::ThrowSerialException(e.m_dwError);
+//			}
+//		}
+//
 		port2.SetMask(EV_TXEMPTY);
 		const char* pszBuf = "This should appear on the serial port";
 #pragma warning(suppress: 26472)
@@ -472,6 +472,7 @@ void CMainFrame:: OneShoutRead()
 	catch (CSerialException& e)
 	{
 		ATLTRACE(_T("Unexpected CSerialPort exception, Error:%u\n"), e.m_dwError);
+		AfxMessageBox(_T("Unexpected CSerialPort exception"));
 		UNREFERENCED_PARAMETER(e);
 	}
 

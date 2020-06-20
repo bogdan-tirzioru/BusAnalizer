@@ -14,7 +14,7 @@ protected: // create from serialization only
 
 // Attributes
 public:
-	int  nrComPort;
+
 // Operations
 public:
 
@@ -52,7 +52,9 @@ protected:
 	void SetDockingWindowIcons(BOOL bHiColorIcons);
 public:
 	afx_msg void OnConnectUsb32772();
-	void OneShoutRead();
+	friend UINT OneShoutRead(LPVOID Param);
+	UINT MyThreadProc(LPVOID Param);
+	afx_msg void OnConnectStop();
 };
 
 

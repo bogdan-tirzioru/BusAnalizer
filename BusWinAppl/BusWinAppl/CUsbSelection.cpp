@@ -32,7 +32,6 @@ void CUsbSelection::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CUsbSelection, CDialogEx)
 	ON_COMMAND(ID_CONNECT_USB, &CUsbSelection::OnConnectUsb)
-	ON_LBN_SELCHANGE(IDC_LIST1, &CUsbSelection::OnLbnSelchangeList1)
 END_MESSAGE_MAP()
 
 

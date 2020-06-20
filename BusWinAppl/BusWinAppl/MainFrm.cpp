@@ -21,6 +21,10 @@ IMPLEMENT_DYNCREATE(CMainFrame, CFrameWndEx)
 const int  iMaxUserToolbars = 10;
 const UINT uiFirstUserToolBarId = AFX_IDW_CONTROLBAR_FIRST + 40;
 const UINT uiLastUserToolBarId = uiFirstUserToolBarId + iMaxUserToolbars - 1;
+int  nrComPort;
+std::vector<BYTE> generalbuffer;
+int b_Stop = false;
+long int frames_rx_received = 0;
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWndEx)
 	ON_WM_CREATE()
@@ -30,6 +34,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWndEx)
 	ON_UPDATE_COMMAND_UI_RANGE(ID_VIEW_APPLOOK_WIN_2000, ID_VIEW_APPLOOK_WINDOWS_7, &CMainFrame::OnUpdateApplicationLook)
 	ON_WM_SETTINGCHANGE()
 	ON_COMMAND(ID_CONNECT_USB, &CMainFrame::OnConnectUsb32772)
+	ON_COMMAND(ID_CONNECT_STOP, &CMainFrame::OnConnectStop)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -356,6 +361,11 @@ void CMainFrame::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
 	m_wndOutput.UpdateFonts();
 }
 
+UINT CMainFrame::MyThreadProc(LPVOID Param) {
+
+
+	return TRUE;
+}
 
 void CMainFrame::OnConnectUsb32772()
 {
@@ -372,7 +382,8 @@ void CMainFrame::OnConnectUsb32772()
 	{
 		case IDOK:
 			//gather your input fields here 
-			AfxMessageBox(_T("Am ajuns la Ok!"), MB_OK | MB_ICONINFORMATION);
+			AfxMessageBox(_T("Am ajuns la Ok,Start threed!"), MB_OK | MB_ICONINFORMATION);
+			AfxBeginThread(OneShoutRead, 0);
 			break;
 		case IDCANCEL:
 			//do something
@@ -385,7 +396,6 @@ void CMainFrame::OnConnectUsb32772()
 			//error creating box
 			break;
 	};
-	OneShoutRead();
 }
 
 #pragma warning(suppress: 26461)
@@ -396,7 +406,7 @@ VOID WINAPI CompletionRoutine(_In_ DWORD dwErrorCode, _In_ DWORD dwNumberOfBytes
 	UNREFERENCED_PARAMETER(lpOverlapped);
 }
 
-void CMainFrame:: OneShoutRead()
+UINT  OneShoutRead(LPVOID Param)
 {
 	//Please note that all the following is just test code to exercise the CSerialPort API. It assumes
 	//that a COM1 is available on the local computer.
@@ -411,9 +421,6 @@ void CMainFrame:: OneShoutRead()
 	{
 		COMMCONFIG config;
 		CSerialPort::GetDefaultConfig(nPortToUse, config);
-
-		
-
 		//Try out the overlapped functions
 		CSerialPort port2;
 		port2.Open(nPortToUse, 9600, CSerialPort::Parity::NoParity, 8, CSerialPort::StopBits::OneStopBit, CSerialPort::FlowControl::NoFlowControl, FALSE);
@@ -423,50 +430,52 @@ void CMainFrame:: OneShoutRead()
 #pragma warning(suppress: 26477)
 		ATLASSERT(hEvent != nullptr);
 		overlapped.hEvent = hEvent;
-//
-//		try
-//		{
-//#pragma warning(suppress: 26472 26486)
-//			port2.Write(buf.data(), static_cast<DWORD>(buf.size()), overlapped);
-//		}
-//#pragma warning(suppress: 26496)
-//		catch (CSerialException& e)
-//		{
-//			if (e.m_dwError == ERROR_IO_PENDING)
-//			{
-//				DWORD dwBytesTransferred = 0;
-//				port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
-//			}
-//			else
-//			{
-//				CSerialPort::ThrowSerialException(e.m_dwError);
-//			}
-//		}
-//		try
-//		{
-//			port2.Read(buf.data(), 10, overlapped);
-//		}
-//#pragma warning(suppress: 26496)
-//		catch (CSerialException& e)
-//		{
-//			if (e.m_dwError == ERROR_IO_PENDING)
-//			{
-//				DWORD dwBytesTransferred = 0;
-//				port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
-//			}
-//			else
-//			{
-//				CSerialPort::ThrowSerialException(e.m_dwError);
-//			}
-//		}
-//
-		port2.SetMask(EV_TXEMPTY);
-		const char* pszBuf = "This should appear on the serial port";
-#pragma warning(suppress: 26472)
-		port2.WriteEx(pszBuf, static_cast<DWORD>(strlen(pszBuf)), &overlapped, CompletionRoutine);
-		SleepEx(INFINITE, TRUE);
-		port2.ReadEx(buf.data(), 10, &overlapped, CompletionRoutine);
-		SleepEx(INFINITE, TRUE);
+		while (b_Stop == false)
+			{
+				try
+			{
+	#pragma warning(suppress: 26472 26486)
+				port2.Write(buf.data(), static_cast<DWORD>(buf.size()), overlapped);
+			}
+	#pragma warning(suppress: 26496)
+			catch (CSerialException& e)
+			{
+				if (e.m_dwError == ERROR_IO_PENDING)
+				{
+					DWORD dwBytesTransferred = 0;
+					port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
+				}
+				else
+				{
+					CSerialPort::ThrowSerialException(e.m_dwError);
+				}
+			}
+			try
+			{
+				port2.Read(buf.data(), 10, overlapped);
+				if (!buf.empty())
+				{
+					if (buf[0] != 0)
+					{
+						generalbuffer = buf;
+						frames_rx_received++;
+					}
+				}
+			}
+	#pragma warning(suppress: 26496)
+			catch (CSerialException& e)
+			{
+				if (e.m_dwError == ERROR_IO_PENDING)
+				{
+					DWORD dwBytesTransferred = 0;
+					port2.GetOverlappedResult(overlapped, dwBytesTransferred, TRUE);
+				}
+				else
+				{
+					CSerialPort::ThrowSerialException(e.m_dwError);
+				}
+			}
+	    }
 	}
 #pragma warning(suppress: 26496)
 	catch (CSerialException& e)
@@ -482,5 +491,14 @@ void CMainFrame:: OneShoutRead()
 		CloseHandle(hEvent);
 		hEvent = nullptr;
 	}
+	return 1;
 }
 
+
+
+void CMainFrame::OnConnectStop()
+{
+	// TODO: Add your command handler code here
+	int b_Stop = true;
+	AfxMessageBox(_T("Close connection"));
+}

@@ -38,13 +38,16 @@ public:
 
 protected:
 	CImageList m_ilLinii;
-
+	HTREEITEM hCAN1tree;
+	HTREEITEM hCAN2tree;
 // Generated message map functions
 protected:
 	afx_msg void OnFilePrintPreview();
 	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
 
 #ifndef _DEBUG  // debug version in BusWinApplView.cpp

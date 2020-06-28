@@ -29,6 +29,7 @@ BEGIN_MESSAGE_MAP(CBusWinApplView, CTreeView)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CBusWinApplView::OnFilePrintPreview)
 	ON_WM_CONTEXTMENU()
 	ON_WM_RBUTTONUP()
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 // CBusWinApplView construction/destruction
@@ -107,19 +108,13 @@ void CBusWinApplView::OnInitialUpdate()
 	// Populate the tree view with drive items.
 	//
 	// Root items first, with automatic sorting
-	HTREEITEM hEagles = GetTreeCtrl().InsertItem(_T("CAN 1"),0, 0, TVI_ROOT, TVI_SORT);
-	HTREEITEM hDoobies = GetTreeCtrl().InsertItem(_T("CAN 2"),0, 0, TVI_ROOT, TVI_SORT);
-
+	hCAN1tree = GetTreeCtrl().InsertItem(_T("CAN 1"),0, 0, TVI_ROOT, TVI_SORT);
+	hCAN2tree = GetTreeCtrl().InsertItem(_T("CAN 2"),0, 0, TVI_ROOT, TVI_SORT);
 	// Eagles subitems second (no sorting)
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hEagles);
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hEagles);
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hEagles);
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hEagles);
-
+	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN1tree);
 	// Doobie subitems third (no sorting)
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hDoobies);
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hDoobies);
-	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hDoobies);
+	GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN2tree);
+	SetTimer(1, 500, NULL);
 }
 
 
@@ -159,3 +154,15 @@ CBusWinApplDoc* CBusWinApplView::GetDocument() const // non-debug version is inl
 
 
 // CBusWinApplView message handlers
+
+
+void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
+{
+	if (nIDEvent == 1)
+	{
+		// TODO: Add your message handler code here and/or call default
+		GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN1tree);
+		GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN2tree);
+	}
+	CTreeView::OnTimer(nIDEvent);
+}

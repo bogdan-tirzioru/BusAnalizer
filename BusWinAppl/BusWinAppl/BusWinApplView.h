@@ -5,7 +5,7 @@
 #pragma once
 
 
-class CBusWinApplView : public CView
+class CBusWinApplView : public CTreeView
 {
 protected: // create from serialization only
 	CBusWinApplView() noexcept;
@@ -26,6 +26,7 @@ protected:
 	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
 	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
 	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
+	virtual void OnInitialUpdate(); //call imediatialy after the contructor
 
 // Implementation
 public:
@@ -36,6 +37,7 @@ public:
 #endif
 
 protected:
+	CImageList m_ilLinii;
 
 // Generated message map functions
 protected:

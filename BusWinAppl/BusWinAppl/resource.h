@@ -38,6 +38,8 @@
 #define IDS_FIND_TAB                    302
 #define IDS_EDIT_MENU                   306
 #define IDD_USB                         310
+#define IDB_BITMAP1                     312
+#define IDB_LINIIIMAGES                 312
 #define IDC_LIST_COM                    1000
 #define ID_CONNECT_USB                  32771
 #define ID_CONNECT_USB32772             32772
@@ -47,7 +49,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        312
+#define _APS_NEXT_RESOURCE_VALUE        313
 #define _APS_NEXT_COMMAND_VALUE         32774
 #define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           310

@@ -14,7 +14,7 @@ protected: // create from serialization only
 
 // Attributes
 public:
-
+	CWinThread* pThread;
 // Operations
 public:
 

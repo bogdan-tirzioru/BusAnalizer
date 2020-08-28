@@ -17,7 +17,11 @@
 #define new DEBUG_NEW
 #endif
 
-
+#include <vector>
+#include <queue>
+extern int u_switchIndex;
+extern std::queue<std::vector<BYTE>>list1;
+extern std::queue<std::vector<BYTE>>list2;
 // CBusWinApplView
 
 IMPLEMENT_DYNCREATE(CBusWinApplView, CTreeView)
@@ -158,11 +162,23 @@ CBusWinApplDoc* CBusWinApplView::GetDocument() const // non-debug version is inl
 
 void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
 {
+	std::vector<BYTE> tempbuffer;
+	LPCTSTR lpstring=_T("data:");
 	if (nIDEvent == 1)
 	{
 		// TODO: Add your message handler code here and/or call default
-		GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN1tree);
-		GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN2tree);
+		//GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN1tree);
+		//GetTreeCtrl().InsertItem(_T("01 23 34 56 76 89 11"), 1, 1, hCAN2tree);
+		if (u_switchIndex == 0)
+		{
+			while (!list1.empty())
+			{
+				tempbuffer = list1.front();
+				list1.pop();
+
+				GetTreeCtrl().InsertItem(lpstring, 1, 1, hCAN1tree);
+			}
+		}
 	}
 	CTreeView::OnTimer(nIDEvent);
 }

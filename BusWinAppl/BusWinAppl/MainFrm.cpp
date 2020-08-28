@@ -13,6 +13,7 @@
 #define new DEBUG_NEW
 #endif
 #include <vector>
+#include <queue>
 
 // CMainFrame
 
@@ -22,7 +23,13 @@ const int  iMaxUserToolbars = 10;
 const UINT uiFirstUserToolBarId = AFX_IDW_CONTROLBAR_FIRST + 40;
 const UINT uiLastUserToolBarId = uiFirstUserToolBarId + iMaxUserToolbars - 1;
 int  nrComPort;
-std::vector<BYTE> generalbuffer;
+std::vector<BYTE> generalbuffer1;
+std::vector<BYTE> generalbuffer2;
+
+std::queue<std::vector<BYTE>> list1;
+std::queue<std::vector<BYTE>> list2;
+
+int u_switchIndex = 0;
 int b_Stop = false;
 long int frames_rx_received = 0;
 
@@ -457,7 +464,16 @@ UINT  OneShoutRead(LPVOID Param)
 				{
 					if (buf[0] != 0)
 					{
-						generalbuffer = buf;
+						if (u_switchIndex == 0)
+						{
+							generalbuffer1 = buf;
+							list1.push(buf);
+						}
+						else
+						{
+							generalbuffer2 = buf;
+							list2.push(buf);
+						}
 						frames_rx_received++;
 					}
 				}

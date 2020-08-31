@@ -179,25 +179,32 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 }
 void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
 {
+	/*if timer expired the copy data aquared by thread to Ctreectl*/
 	std::vector<BYTE> tempbuffer;
 	LPCTSTR lpstring=nullptr;
+	/*if the timer 1 event*/
 	if (nIDEvent == 1)
 	{
+		/*switch buffer to evercome the concurency*/
 		if (u_switchIndex == 0)
 		{
 			u_switchIndex = 1;
+			/*empty queue to treecontrol*/
 			while (!list1.empty())
 			{
 				tempbuffer = list1.front();
 				list1.pop();
+				/*convert number to string*/
 				TransformBuffer(lpstring, tempbuffer);
 				GetTreeCtrl().InsertItem(lpstring, 1, 1, hCAN1tree);
+				/*delete alocated memory*/
 				if (lpstring !=nullptr) delete[]lpstring;
 				
 			}
 		}
 		else
 		{
+			/*second buffer implementation*/
 			u_switchIndex = 0;
 			while (!list2.empty())
 			{

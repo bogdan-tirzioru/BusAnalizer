@@ -23,6 +23,8 @@
 extern int u_switchIndex;
 extern std::queue<std::vector<BYTE>>list1;
 extern std::queue<std::vector<BYTE>>list2;
+extern CRITICAL_SECTION m_cs1;
+extern CRITICAL_SECTION m_cs2;
 // CBusWinApplView
 
 IMPLEMENT_DYNCREATE(CBusWinApplView, CTreeView)
@@ -167,6 +169,21 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 	pch = new TCHAR[1000];
 	std::wstring mynewStr(_T(""));
 	std::wstring emptystr(_T(" "));
+	std::wstring douapuncte(_T(":"));
+	std::wstring delimitator(_T("->"));
+	BYTE myhour;
+	BYTE myminutes;
+	BYTE myseconds;
+	myhour = localBuffur[localBuffur.size()-1];
+	myminutes = localBuffur[localBuffur.size()-2];
+	myseconds = localBuffur[localBuffur.size()-3]; 
+	std::wstring mylocalstr;
+	mylocalstr = std::to_wstring(myhour);
+	mynewStr = mynewStr + mylocalstr;
+	mylocalstr = std::to_wstring(myminutes);
+	mynewStr = mynewStr + douapuncte + mylocalstr;
+	mylocalstr = std::to_wstring(myseconds);
+	mynewStr = mynewStr + douapuncte + mylocalstr + delimitator;
 	for each (BYTE var in localBuffur)
 	{
 		std::wstring mylocalstr;
@@ -185,10 +202,12 @@ void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
 	/*if the timer 1 event*/
 	if (nIDEvent == 1)
 	{
+		
 		/*switch buffer to evercome the concurency*/
 		if (u_switchIndex == 0)
 		{
 			u_switchIndex = 1;
+			EnterCriticalSection(&m_cs1);
 			/*empty queue to treecontrol*/
 			while (!list1.empty())
 			{
@@ -201,11 +220,13 @@ void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
 				if (lpstring !=nullptr) delete[]lpstring;
 				
 			}
+			LeaveCriticalSection(&m_cs1);
 		}
 		else
 		{
 			/*second buffer implementation*/
 			u_switchIndex = 0;
+			EnterCriticalSection(&m_cs2);
 			while (!list2.empty())
 			{
 				tempbuffer = list2.front();
@@ -214,7 +235,9 @@ void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
 				GetTreeCtrl().InsertItem(lpstring, 1, 1, hCAN1tree);
 				if (lpstring != nullptr) delete[]lpstring;
 			}
+			LeaveCriticalSection(&m_cs2);
 		}
+		
 	}
 	CTreeView::OnTimer(nIDEvent);
 }

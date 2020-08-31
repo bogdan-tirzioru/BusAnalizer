@@ -32,6 +32,9 @@ std::queue<std::vector<BYTE>> list2;
 int u_switchIndex = 0;
 int b_Stop = false;
 long int frames_rx_received = 0;
+CRITICAL_SECTION m_cs1;
+CRITICAL_SECTION m_cs2;
+
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWndEx)
 	ON_WM_CREATE()
@@ -58,6 +61,9 @@ CMainFrame::CMainFrame() noexcept
 {
 	// TODO: add member initialization code here
 	theApp.m_nAppLook = theApp.GetInt(_T("ApplicationLook"), ID_VIEW_APPLOOK_VS_2008);
+	//Initilize the critical section
+	InitializeCriticalSection(&m_cs1);
+	InitializeCriticalSection(&m_cs2);
 }
 
 CMainFrame::~CMainFrame()
@@ -464,16 +470,36 @@ UINT  OneShoutRead(LPVOID Param)
 				{
 					if (buf[0] != 0)
 					{
+						time_t osBinaryTime;  // C run-time time (defined in <time.h>)
+						time(&osBinaryTime);  // Get the current time from the 
+												 // operating system.
+						CTime time3(osBinaryTime);  // CTime from C run-time time
+						std::vector<BYTE> bufferTime;
+						bufferTime.resize(3);
+						bufferTime[0] = time3.GetHour();
+						bufferTime[1] = time3.GetMinute();
+						bufferTime[2] = time3.GetSecond();
+						
 						if (u_switchIndex == 0)
 						{
-							generalbuffer1 = buf;
+							EnterCriticalSection(&m_cs1);
+							buf.push_back(bufferTime[2]);
+							buf.push_back(bufferTime[1]);
+							buf.push_back(bufferTime[0]);
 							list1.push(buf);
+							LeaveCriticalSection(&m_cs1);
+							
 						}
 						else
 						{
-							generalbuffer2 = buf;
+							EnterCriticalSection(&m_cs2);
+							buf.push_back(bufferTime[2]);
+							buf.push_back(bufferTime[1]);
+							buf.push_back(bufferTime[0]);
 							list2.push(buf);
+							LeaveCriticalSection(&m_cs2);
 						}
+						
 						frames_rx_received++;
 					}
 				}

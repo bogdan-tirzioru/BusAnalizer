@@ -3,7 +3,7 @@
 //
 
 #pragma once
-
+#include <vector>
 
 class CBusWinApplView : public CTreeView
 {
@@ -40,6 +40,7 @@ protected:
 	CImageList m_ilLinii;
 	HTREEITEM hCAN1tree;
 	HTREEITEM hCAN2tree;
+	void TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuffur);
 // Generated message map functions
 protected:
 	afx_msg void OnFilePrintPreview();

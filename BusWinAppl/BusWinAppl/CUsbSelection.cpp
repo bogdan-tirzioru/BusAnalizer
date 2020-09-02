@@ -60,7 +60,7 @@ void CUsbSelection::OnLbnSelchangeList1()
 
 void CUsbSelection::LoadListBox() {
 	CString str = _T("");
-	for (int i = 0; i < 20; i++) {
+	for (int i = 1; i <= 15; i++) {
 
 		str.Format(_T("Com %d"), i);
 		m_listUsb.AddString(str);

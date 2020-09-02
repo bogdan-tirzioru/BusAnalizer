@@ -395,7 +395,7 @@ void CMainFrame::OnConnectUsb32772()
 	{
 		case IDOK:
 			//gather your input fields here 
-			AfxMessageBox(_T("Am ajuns la Ok,Start threed!"), MB_OK | MB_ICONINFORMATION);
+			//AfxMessageBox(_T("Am ajuns la Ok,Start threed!"), MB_OK | MB_ICONINFORMATION);
 			pThread = AfxBeginThread(OneShoutRead, 0);
 			break;
 		case IDCANCEL:

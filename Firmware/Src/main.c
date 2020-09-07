@@ -58,6 +58,7 @@ UART_HandleTypeDef huart1;
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDeviceHS;
+extern TIM_HandleTypeDef        htim1;
 uint8_t ui8SetRequestToUsbCAN1 =0;
 /* USER CODE END PV */
 
@@ -198,11 +199,20 @@ int main(void)
 
 	if (ui8SetRequestToUsbCAN1==1)
 	{
-		sText[0]='\n';
-		sText[1]='\r';
-		for (uint8_t ui8Index=0;ui8Index<3;ui8Index++)
+		uint8_t ui8IndexOffset =0;
+		uint16_t lui16Lengthpdu = 0;
+		uint16_t ui16TimerValue =0;
+		memcpy(&sText[0],&RxHeader.Identifier,sizeof(RxHeader.Identifier));
+		ui8IndexOffset = sizeof(RxHeader.Identifier);
+		lui16Lengthpdu = ((uint32_t)RxHeader.DataLength & 0xFFFF0000) >> 16;
+		memcpy(&sText[ui8IndexOffset],&lui16Lengthpdu,sizeof(lui16Lengthpdu));
+		ui8IndexOffset += sizeof(lui16Lengthpdu);
+		ui16TimerValue = __HAL_TIM_GET_COUNTER(&htim1);
+		memcpy(&sText[ui8IndexOffset],&ui16TimerValue,sizeof(ui16TimerValue));
+		ui8IndexOffset += sizeof(ui16TimerValue);
+		for (uint8_t ui8Index=0;ui8Index<lui16Lengthpdu;ui8Index++)
 		{
-			sText[ui8Index +2] = RxData[ui8Index];
+			sText[ui8Index +ui8IndexOffset] = RxData[ui8Index];
 		}
 		CDC_Transmit_HS(&sText,60);
 		GPIOB->ODR ^=0x1;
@@ -337,7 +347,7 @@ void MX_FDCAN1_Init(void)
     sFilterConfig.FilterIndex = 0;
     sFilterConfig.FilterType = FDCAN_FILTER_MASK;
     sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-    sFilterConfig.FilterID1 = 0x321;
+    sFilterConfig.FilterID1 = 0x7FF;
     sFilterConfig.FilterID2 = 0x7FF;
     if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK)
     {

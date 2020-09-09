@@ -149,20 +149,9 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >DTCMRAM AT> FLASH
 
-  .bssreceive :
-  {
-    /* This is used by the startup in order to initialize the .bss secion */
-    *(.bss.receive)
-  } >RAM_D1
-  
-  .bsstransmit :
-  {
-    /* This is used by the startup in order to initialize the .bss secion */
-    *(.bss.transmit)
-  } >RAM_D2
   
   /* Uninitialized data section */
-  . = ALIGN(4);
+  . = ALIGN(16);
   .bss :
   {
     /* This is used by the startup in order to initialize the .bss secion */
@@ -172,7 +161,7 @@ SECTIONS
     *(.bss*)
     *(COMMON)
 
-    . = ALIGN(4);
+    . = ALIGN(16);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
   } >DTCMRAM
@@ -182,12 +171,12 @@ SECTIONS
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
   {
-    . = ALIGN(8);
+    . = ALIGN(16);
     PROVIDE ( end = . );
     PROVIDE ( _end = . );
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
-    . = ALIGN(8);
+    . = ALIGN(16);
   } >DTCMRAM
 
   

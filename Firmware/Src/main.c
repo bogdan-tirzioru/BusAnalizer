@@ -80,13 +80,15 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 FDCAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[8];
-uint16_t ui16MessageTrigger =0;
-FDCAN_TxHeaderTypeDef FixedTxHeader;
 uint8_t FixedTxData[8];
 char sText[100];
+FDCAN_TxHeaderTypeDef FixedTxHeader;
+
+uint16_t ui16MessageTrigger =0;
 uint32_t ui32CounterTransmisionErrorCAN1=0;
 uint8_t ui8ErrorTransmisionCAN1 =0;
 uint8_t ui16MessageTriggerFlag =0;
+uint32_t ui32TimerValue =0;
 /* USER CODE END 0 */
 
 /**
@@ -185,13 +187,13 @@ int main(void)
 	{
 		uint8_t ui8IndexOffset =0;
 		uint16_t lui16Lengthpdu = 0;
-		uint32_t ui32TimerValue =0;
+
 		memcpy(&sText[0],&RxHeader.Identifier,sizeof(RxHeader.Identifier));
 		ui8IndexOffset = sizeof(RxHeader.Identifier);
 		lui16Lengthpdu = ((uint32_t)RxHeader.DataLength & 0xFFFF0000) >> 16;
 		memcpy(&sText[ui8IndexOffset],&lui16Lengthpdu,sizeof(lui16Lengthpdu));
 		ui8IndexOffset += sizeof(lui16Lengthpdu);
-		ui32TimerValue = __HAL_TIM_GET_COUNTER(&htim2);
+
 		memcpy(&sText[ui8IndexOffset],&ui32TimerValue,sizeof(ui32TimerValue));
 		ui8IndexOffset += sizeof(ui32TimerValue);
 		for (uint8_t ui8Index=0;ui8Index<lui16Lengthpdu;ui8Index++)
@@ -588,7 +590,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 30;
+  htim2.Init.Prescaler = 29;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 0xFFFFFFFF;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -732,12 +734,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     Error_Handler();
     }
 
-    /* Display LEDx */
-    if ((RxHeader.Identifier == 0x321) && (RxHeader.IdType == FDCAN_STANDARD_ID) && (RxHeader.DataLength == FDCAN_DLC_BYTES_2))
-    {
-   //   LED_Display(RxData[0]);
-   //   ubKeyNumber = RxData[0];
-    }
+    ui32TimerValue = __HAL_TIM_GET_COUNTER(&htim2);
     ui8SetRequestToUsbCAN1=1;
     if (HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
     {
@@ -767,7 +764,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM1) {
 	    ui16MessageTrigger++;
-	    if ((ui16MessageTrigger%1024) == 0)
+	    if ((ui16MessageTrigger%1000) == 0)
 	    {
 	    	ui16MessageTriggerFlag = 1;
 	    };

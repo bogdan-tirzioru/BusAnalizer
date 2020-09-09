@@ -20,7 +20,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -57,7 +56,6 @@ TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 
-
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDeviceHS;
 extern TIM_HandleTypeDef        htim1;
@@ -74,8 +72,6 @@ static void MX_RTC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
-
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -134,6 +130,7 @@ int main(void)
   MX_RTC_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_USB_DEVICE_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 	/* init code for USB_DEVICE */
@@ -146,35 +143,16 @@ int main(void)
 	// USBD_CDC_Init(&hUsbDeviceHS,0);
 
 	ui32CounterTransmisionErrorCAN1 =0;
+	HAL_TIM_Base_Start(&htim2);
   /* USER CODE END 2 */
-
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
-
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
- 
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* USER CODE END WHILE */
 
-
+    /* USER CODE BEGIN 3 */
 	if(ui16MessageTriggerFlag == 1)
 	{
 		ui16MessageTriggerFlag = 0;
@@ -207,15 +185,15 @@ int main(void)
 	{
 		uint8_t ui8IndexOffset =0;
 		uint16_t lui16Lengthpdu = 0;
-		uint16_t ui16TimerValue =0;
+		uint32_t ui32TimerValue =0;
 		memcpy(&sText[0],&RxHeader.Identifier,sizeof(RxHeader.Identifier));
 		ui8IndexOffset = sizeof(RxHeader.Identifier);
 		lui16Lengthpdu = ((uint32_t)RxHeader.DataLength & 0xFFFF0000) >> 16;
 		memcpy(&sText[ui8IndexOffset],&lui16Lengthpdu,sizeof(lui16Lengthpdu));
 		ui8IndexOffset += sizeof(lui16Lengthpdu);
-		ui16TimerValue = __HAL_TIM_GET_COUNTER(&htim1);
-		memcpy(&sText[ui8IndexOffset],&ui16TimerValue,sizeof(ui16TimerValue));
-		ui8IndexOffset += sizeof(ui16TimerValue);
+		ui32TimerValue = __HAL_TIM_GET_COUNTER(&htim2);
+		memcpy(&sText[ui8IndexOffset],&ui32TimerValue,sizeof(ui32TimerValue));
+		ui8IndexOffset += sizeof(ui32TimerValue);
 		for (uint8_t ui8Index=0;ui8Index<lui16Lengthpdu;ui8Index++)
 		{
 			sText[ui8Index +ui8IndexOffset] = RxData[ui8Index];
@@ -224,10 +202,11 @@ int main(void)
 		GPIOB->ODR ^=0x1;
 		ui8SetRequestToUsbCAN1 =0;
 	}
-
-  /* USER CODE END 3 */
+    
   }
+  /* USER CODE END 3 */
 }
+
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -274,7 +253,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV16;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
@@ -449,7 +428,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x307075B1;
+  hi2c1.Init.Timing = 0x00303956;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -609,9 +588,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 1;
+  htim2.Init.Prescaler = 32;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 100;
+  htim2.Init.Period = 0xFFFFFFFF;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -769,26 +748,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used 
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
-{
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END 5 */ 
-}
-
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM1 interrupt took place, inside
@@ -804,14 +763,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
     HAL_IncTick();
-    ui16MessageTrigger++;
-    if ((ui16MessageTrigger%1024) == 0)
-    {
-    	ui16MessageTriggerFlag = 1;
-    };
   }
   /* USER CODE BEGIN Callback 1 */
-
+  if (htim->Instance == TIM1) {
+	    ui16MessageTrigger++;
+	    if ((ui16MessageTrigger%1024) == 0)
+	    {
+	    	ui16MessageTriggerFlag = 1;
+	    };
+	  }
   /* USER CODE END Callback 1 */
 }
 

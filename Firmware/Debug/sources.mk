@@ -18,10 +18,6 @@ SUBDIRS := \
 Drivers/STM32H7xx_HAL_Driver/Src \
 Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src \
-Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS \
-Middlewares/Third_Party/FreeRTOS/Source \
-Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
-Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang \
 Src \
 startup \
 

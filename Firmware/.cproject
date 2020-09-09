@@ -40,9 +40,9 @@
 									<listOptionValue builtIn="false" value="../Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" />
+									
+									
+									
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Core/Inc" />
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32H7xx/Include" />
@@ -66,9 +66,9 @@
 									<listOptionValue builtIn="false" value="../Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" />
+									
+									
+									
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Core/Inc" />
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32H7xx/Include" />
@@ -163,9 +163,9 @@
 									<listOptionValue builtIn="false" value="../Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" />
+									
+									
+									
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Core/Inc" />
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32H7xx/Include" />
@@ -188,9 +188,9 @@
 									<listOptionValue builtIn="false" value="../Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" />
-									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" />
+									
+									
+									
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Core/Inc" />
 									<listOptionValue builtIn="false" value="../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc" />
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32H7xx/Include" />

@@ -39,23 +39,6 @@ Src/main.o: ../Src/main.c E:/myproject/BusAnalizer/Firmware/Inc/main.h \
  E:/myproject/BusAnalizer/Firmware/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h \
  E:/myproject/BusAnalizer/Firmware/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h \
  E:/myproject/BusAnalizer/Firmware/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
- E:/myproject/BusAnalizer/Firmware/Inc/FreeRTOSConfig.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
- E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
  E:/myproject/BusAnalizer/Firmware/Inc/usb_device.h \
  E:/myproject/BusAnalizer/Firmware/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
  E:/myproject/BusAnalizer/Firmware/Inc/usbd_conf.h \
@@ -142,40 +125,6 @@ E:/myproject/BusAnalizer/Firmware/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal
 E:/myproject/BusAnalizer/Firmware/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h:
 
 E:/myproject/BusAnalizer/Firmware/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
-
-E:/myproject/BusAnalizer/Firmware/Inc/FreeRTOSConfig.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h:
-
-E:/myproject/BusAnalizer/Firmware/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
 
 E:/myproject/BusAnalizer/Firmware/Inc/usb_device.h:
 

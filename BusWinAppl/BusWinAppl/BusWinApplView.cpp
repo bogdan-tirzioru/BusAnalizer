@@ -174,6 +174,11 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 	BYTE myhour;
 	BYTE myminutes;
 	BYTE myseconds;
+	DWORD myCANId;
+	DWORD myTimeStampUs;
+	WORD mypdulength;
+	DWORD DeltaTimeStampUs;
+
 	myhour = localBuffur[localBuffur.size()-1];
 	myminutes = localBuffur[localBuffur.size()-2];
 	myseconds = localBuffur[localBuffur.size()-3]; 
@@ -183,10 +188,19 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 	mylocalstr = std::to_wstring(myminutes);
 	mynewStr = mynewStr + douapuncte + mylocalstr;
 	mylocalstr = std::to_wstring(myseconds);
-	mynewStr = mynewStr + douapuncte + mylocalstr + delimitator;
-	for each (BYTE var in localBuffur)
+	mynewStr = mynewStr + douapuncte + mylocalstr ;
+	myCANId = localBuffur[0] + localBuffur[1] * 256 + localBuffur[2] * 65536 + localBuffur[3]* 16777216;
+	mypdulength = localBuffur[4] + localBuffur[5] * 256;
+	
+	myTimeStampUs = localBuffur[6] + localBuffur[7] * 256 + localBuffur[8] * 65536 + localBuffur[9] * 16777216;
+	DeltaTimeStampUs = myTimeStampUs - oldTimeStamp;
+	oldTimeStamp = myTimeStampUs;
+	mynewStr = mynewStr + douapuncte+ std::to_wstring(DeltaTimeStampUs) + delimitator;
+	mynewStr = mynewStr + emptystr + std::to_wstring(myCANId);
+	for (BYTE ui8LocalIndex = 10; ui8LocalIndex<(10 + mypdulength); ui8LocalIndex++)
 	{
 		std::wstring mylocalstr;
+		BYTE var = localBuffur[ui8LocalIndex];
 		mylocalstr = std::to_wstring(var);
 		mynewStr = mynewStr + emptystr+ mylocalstr;
 	}

@@ -40,6 +40,7 @@ protected:
 	CImageList m_ilLinii;
 	HTREEITEM hCAN1tree;
 	HTREEITEM hCAN2tree;
+	DWORD oldTimeStamp;
 	void TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuffur);
 // Generated message map functions
 protected:

@@ -89,6 +89,7 @@ uint32_t ui32CounterTransmisionErrorCAN1=0;
 uint8_t ui8ErrorTransmisionCAN1 =0;
 uint8_t ui16MessageTriggerFlag =0;
 uint32_t ui32TimerValue =0;
+uint32_t ui32USBerrors =0;
 /* USER CODE END 0 */
 
 /**
@@ -187,6 +188,7 @@ int main(void)
 	{
 		uint8_t ui8IndexOffset =0;
 		uint16_t lui16Lengthpdu = 0;
+		uint8_t ui8ErrorUSB=0;
 
 		memcpy(&sText[0],&RxHeader.Identifier,sizeof(RxHeader.Identifier));
 		ui8IndexOffset = sizeof(RxHeader.Identifier);
@@ -200,7 +202,8 @@ int main(void)
 		{
 			sText[ui8Index +ui8IndexOffset] = RxData[ui8Index];
 		}
-		CDC_Transmit_HS(&sText,60);
+		ui8ErrorUSB = CDC_Transmit_HS(&sText,510);
+		if (ui8ErrorUSB != USBD_OK) ui32USBerrors++;
 		GPIOB->ODR ^=0x1;
 		ui8SetRequestToUsbCAN1 =0;
 	}
@@ -764,7 +767,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM1) {
 	    ui16MessageTrigger++;
-	    if ((ui16MessageTrigger%1000) == 0)
+	    if ((ui16MessageTrigger%100) == 0)
 	    {
 	    	ui16MessageTriggerFlag = 1;
 	    };

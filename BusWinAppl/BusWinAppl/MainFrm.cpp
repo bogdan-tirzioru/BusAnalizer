@@ -465,7 +465,7 @@ UINT  OneShoutRead(LPVOID Param)
 			}
 			try
 			{
-				port2.Read(buf.data(), 60, overlapped);
+				port2.Read(buf.data(), 512, overlapped);
 				if (!buf.empty())
 				{
 					if (buf[0] != 0)

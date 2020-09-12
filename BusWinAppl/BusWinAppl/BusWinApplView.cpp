@@ -17,9 +17,7 @@
 #define new DEBUG_NEW
 #endif
 
-#include <vector>
-#include <queue>
-#include <string>
+
 extern int u_switchIndex;
 extern std::queue<std::vector<BYTE>>list1;
 extern std::queue<std::vector<BYTE>>list2;
@@ -44,6 +42,8 @@ END_MESSAGE_MAP()
 CBusWinApplView::CBusWinApplView() noexcept
 {
 	// TODO: add construction code here
+	bPDUhexView = true;
+	bIdViweHex = true;
 
 }
 
@@ -159,6 +159,52 @@ CBusWinApplDoc* CBusWinApplView::GetDocument() const // non-debug version is inl
 }
 #endif //_DEBUG
 
+std::wstring CBusWinApplView::ByteTohexStr(BYTE mybyte)
+{
+	wchar_t buffer[3];
+	if ((mybyte >= 0) && (mybyte <= 15))
+	{
+		std::swprintf(buffer, 3, L"0%x\0", mybyte);
+	}
+	else
+	{
+		std::swprintf(buffer, 3, L"%x\0", mybyte);
+	}
+	std::wstring localstr = buffer;
+	std::transform(localstr.begin(), localstr.end(), localstr.begin(), ::toupper);
+	return localstr;
+}
+std::wstring CBusWinApplView::IntToStr(WORD myword)
+{
+	wchar_t bufferlower[3];
+	wchar_t bufferhigh[3];
+	BYTE mylowerbyte;
+	BYTE myhighByte;
+	mylowerbyte = myword & 0x00FF;
+	myhighByte = (myword & 0xFF00) >> 8;
+	if ((mylowerbyte >= 0) && (mylowerbyte <= 15))
+	{
+		std::swprintf(bufferlower, 3, L"0%x\0", mylowerbyte);
+	}
+	else
+	{
+		std::swprintf(bufferlower, 3, L"%x\0", mylowerbyte);
+	}
+	if ((myhighByte >= 0) && (myhighByte <= 15))
+	{
+		std::swprintf(bufferhigh, 3, L"0%x\0", myhighByte);
+	}
+	else
+	{
+		std::swprintf(bufferhigh, 3, L"%x\0", myhighByte);
+	}
+	std::wstring localstrlower = bufferlower;
+	std::wstring localstrhigh = bufferhigh;
+	std::wstring localstr = localstrhigh + localstrlower;
+	std::transform(localstr.begin(), localstr.end(), localstr.begin(), ::toupper);
+	return localstr;
+}
+
 
 // CBusWinApplView message handlers
 
@@ -196,12 +242,26 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 	DeltaTimeStampUs = myTimeStampUs - oldTimeStamp;
 	oldTimeStamp = myTimeStampUs;
 	mynewStr = mynewStr + douapuncte+ std::to_wstring(DeltaTimeStampUs) + delimitator;
-	mynewStr = mynewStr + emptystr + std::to_wstring(myCANId);
+	if (bIdViweHex)
+	{
+		mynewStr = mynewStr + emptystr + IntToStr(myCANId);
+	}
+	else
+	{
+		mynewStr = mynewStr + emptystr + std::to_wstring(myCANId);
+	}
 	for (BYTE ui8LocalIndex = 10; ui8LocalIndex<(10 + mypdulength); ui8LocalIndex++)
 	{
 		std::wstring mylocalstr;
 		BYTE var = localBuffur[ui8LocalIndex];
-		mylocalstr = std::to_wstring(var);
+		if (bPDUhexView)
+		{
+			mylocalstr = ByteTohexStr(var);
+		}
+		else
+		{
+			mylocalstr = std::to_wstring(var);
+		}
 		mynewStr = mynewStr + emptystr+ mylocalstr;
 	}
 	pch1 = mynewStr.c_str();

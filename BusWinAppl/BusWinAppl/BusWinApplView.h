@@ -4,6 +4,8 @@
 
 #pragma once
 #include <vector>
+#include <queue>
+#include <string>
 
 class CBusWinApplView : public CTreeView
 {
@@ -41,6 +43,10 @@ protected:
 	HTREEITEM hCAN1tree;
 	HTREEITEM hCAN2tree;
 	DWORD oldTimeStamp;
+	boolean bPDUhexView;
+	boolean bIdViweHex;
+	std::wstring CBusWinApplView::ByteTohexStr(BYTE mybyte);
+	std::wstring CBusWinApplView::IntToStr(WORD myword);
 	void TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuffur);
 // Generated message map functions
 protected:

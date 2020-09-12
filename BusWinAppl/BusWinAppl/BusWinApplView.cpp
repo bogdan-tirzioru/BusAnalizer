@@ -35,6 +35,8 @@ BEGIN_MESSAGE_MAP(CBusWinApplView, CTreeView)
 	ON_WM_CONTEXTMENU()
 	ON_WM_RBUTTONUP()
 	ON_WM_TIMER()
+	ON_COMMAND(ID_VIEW_TOGGLEPDUHEX, &CBusWinApplView::OnViewTogglepduhex)
+	ON_COMMAND(ID_VIEW_TOGGLEIDHEX, &CBusWinApplView::OnViewToggleidhex)
 END_MESSAGE_MAP()
 
 // CBusWinApplView construction/destruction
@@ -205,6 +207,16 @@ std::wstring CBusWinApplView::IntToStr(WORD myword)
 	return localstr;
 }
 
+std::wstring CBusWinApplView::longIntToStr(DWORD Dmyword)
+{
+	DWORD localvar;
+	localvar = ((DWORD)Dmyword & 0xFFFF0000) >> 16;
+	std::wstring localhi = IntToStr((WORD)localvar);
+	localvar = ((DWORD)Dmyword) & ((DWORD)0x0000FFFF);
+	std::wstring locallo = IntToStr((WORD)localvar);
+	std::wstring localstr = localhi + locallo;
+	return localstr;
+}
 
 // CBusWinApplView message handlers
 
@@ -244,7 +256,7 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 	mynewStr = mynewStr + douapuncte+ std::to_wstring(DeltaTimeStampUs) + delimitator;
 	if (bIdViweHex)
 	{
-		mynewStr = mynewStr + emptystr + IntToStr(myCANId);
+		mynewStr = mynewStr + emptystr + longIntToStr(myCANId);
 	}
 	else
 	{
@@ -314,4 +326,32 @@ void CBusWinApplView::OnTimer(UINT_PTR nIDEvent)
 		
 	}
 	CTreeView::OnTimer(nIDEvent);
+}
+
+
+void CBusWinApplView::OnViewTogglepduhex()
+{
+	if (bPDUhexView)
+	{
+		bPDUhexView = false;
+	}
+	else
+	{
+		bPDUhexView = true;
+	}
+	// TODO: Add your command handler code here
+}
+
+
+void CBusWinApplView::OnViewToggleidhex()
+{
+	if (bIdViweHex)
+	{
+		bIdViweHex = false;
+	}
+	else
+	{
+		bIdViweHex = true;
+	}
+	// TODO: Add your command handler code here
 }

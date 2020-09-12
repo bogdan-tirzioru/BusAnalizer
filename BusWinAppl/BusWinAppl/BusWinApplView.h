@@ -47,6 +47,7 @@ protected:
 	boolean bIdViweHex;
 	std::wstring CBusWinApplView::ByteTohexStr(BYTE mybyte);
 	std::wstring CBusWinApplView::IntToStr(WORD myword);
+	std::wstring CBusWinApplView::longIntToStr(DWORD Dmyword);
 	void TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuffur);
 // Generated message map functions
 protected:
@@ -56,6 +57,8 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnViewTogglepduhex();
+	afx_msg void OnViewToggleidhex();
 };
 
 #ifndef _DEBUG  // debug version in BusWinApplView.cpp

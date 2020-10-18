@@ -1,2 +1,0 @@
-E:\myproject\BusAnalizer\BusWinAppl\BusWinAppl\Debug\BusWinAppl.exe
-E:\myproject\BusAnalizer\BusWinAppl\BusWinAppl\Debug\BusWinAppl.pdb

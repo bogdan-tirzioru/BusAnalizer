@@ -1,9 +1,0 @@
-﻿  pch.cpp
-  BusWinAppl.cpp
-  BusWinApplDoc.cpp
-  BusWinApplView.cpp
-  CUsbSelection.cpp
-  MainFrm.cpp
-  OutputWnd.cpp
-  Generating Code...
-  BusWinAppl.vcxproj -> E:\myproject\BusAnalizer\BusWinAppl\BusWinAppl\Debug\BusWinAppl.exe

@@ -93,8 +93,44 @@ void Error_Handler(void);
 
 #ifdef __cplusplus
 }
-#endif
+class BusAnalizer{
+private:
+	FDCAN_RxHeaderTypeDef RxHeader;
+	uint8_t RxData[8];
+	uint8_t FixedTxData[8];
+	unsigned char sText[100];
+	FDCAN_TxHeaderTypeDef FixedTxHeader;
 
+	uint16_t ui16MessageTrigger =0;
+	uint32_t ui32CounterTransmisionErrorCAN1=0;
+	uint8_t ui8ErrorTransmisionCAN1 =0;
+	bool ui16MessageTriggerFlag =false;
+	uint32_t ui32TimerValue =0;
+	uint32_t ui32USBerrors =0;
+	bool ui8SetRequestToUsbCAN1 =false;
+public:
+  BusAnalizer(void);
+  void Run(void);
+  void SystemClock_Config(void);
+  void MX_FDCAN1_Init(void);
+  void MX_FDCAN2_Init(void);
+  void MX_I2C1_Init(void);
+  void MX_RTC_Init(void);
+  void MX_SPI1_Init(void);
+  void MX_TIM2_Init(void);
+  void MX_USART1_UART_Init(void);
+  void MX_GPIO_Init(void);
+  void Error_Handler(void);
+  FDCAN_RxHeaderTypeDef *GetRxHeadearPointer(void){ return &(this->RxHeader);};
+  uint8_t *GetRxDataPointer(void){return this->RxData;};
+  void SetTimerValueRxFifo0(uint32_t lui32TimerValue){ui32TimerValue=lui32TimerValue;};
+  void SetRequesttoUsbCAN1(bool ub){ui8SetRequestToUsbCAN1 =ub;}
+  void IncrementMessageTrigger(void){ui16MessageTrigger++;};
+  uint16_t Getui16MessageTrigger(void){return ui16MessageTrigger;};
+  void SetMessageTriggerFlag(bool lbMessageflag){ui16MessageTriggerFlag = lbMessageflag;};
+  ~BusAnalizer(void){;};;
+};
+#endif
 #endif /* __MAIN_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

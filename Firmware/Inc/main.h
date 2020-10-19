@@ -46,34 +46,6 @@ extern "C" {
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
-#define NumberOfRxBuffers 64
-#define MaxPayload 64
-#define MaxSizeRxMessage 4096
-#define MaxSizeTxMessage 2048
-#define NumberOfRxToSendUsb 60
-
-typedef struct {
-	/*header of the CAN msg received*/
-	FDCAN_RxHeaderTypeDef sRxHeaderTypeDef;
-	/*actual payload*/
-	uint8_t aui8PayLoad[MaxPayload];
-	/*state of the message*/
-	uint8_t ui8StateMsg;
-}TMessageInfo;
-
-extern TMessageInfo sListRxMessage[MaxSizeRxMessage];
-extern TMessageInfo sListTxMessage[MaxSizeTxMessage];
-
-extern uint16_t ui16IndexRxMsg;
-extern uint16_t ui16IndexRxUsb;
-extern uint16_t ui16IndexTxMsg;
-extern uint16_t ui16IndexTxUsb;
-extern uint16_t ui16RxToBeSend;
-extern uint16_t ui16TxToBeSend;
-extern void FindNextMsgRx(uint16_t *ui16Index,uint8_t ui8Conditie);
-extern void FindNextMsgTx(uint16_t *ui16Index,uint8_t ui8Conditie);
-/* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);

@@ -170,8 +170,11 @@ void BusAnalizer::Run(void)
 		{
 			sText[ui8Index +ui8IndexOffset] = RxData[ui8Index];
 		}
-		ui8ErrorUSB = CDC_Transmit_HS(static_cast<unsigned char *>(sText),512);
-		if (ui8ErrorUSB != USBD_OK) ui32USBerrors++;
+		do
+		{
+		  ui8ErrorUSB = CDC_Transmit_HS(static_cast<unsigned char *>(sText),512);
+		  if (ui8ErrorUSB != USBD_OK) ui32USBerrors++;
+		}while (ui8ErrorUSB != USBD_OK);
 		GPIOB->ODR ^=0x1;
 		ui8SetRequestToUsbCAN1 =false;
 	}
@@ -561,7 +564,7 @@ void BusAnalizer::MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 30;
+  htim2.Init.Prescaler = 29;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 0xFFFFFFFF;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -755,7 +758,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM1) {
 	    sBussAnalizer.IncrementMessageTrigger();
-	    if ((sBussAnalizer.Getui16MessageTrigger()%20) == 0)
+	    if ((sBussAnalizer.Getui16MessageTrigger()%40) == 0)
 	    {
 	    	sBussAnalizer.SetMessageTriggerFlag(true);
 	    };

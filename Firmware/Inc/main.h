@@ -46,25 +46,8 @@ extern "C" {
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
-
-/* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(void);
-
-/* USER CODE BEGIN EFP */
-
-/* USER CODE END EFP */
-
-/* Private defines -----------------------------------------------------------*/
-#define FD1_STBM_Pin GPIO_PIN_3
-#define FD1_STBM_GPIO_Port GPIOA
-#define FD2_STBM_Pin GPIO_PIN_4
-#define FD2_STBM_GPIO_Port GPIOA
-/* USER CODE BEGIN Private defines */
-
-/* USER CODE END Private defines */
-
+/* USER CODE BEGIN EM */
 #ifdef __cplusplus
-}
 class BusAnalizer{
 private:
 	FDCAN_RxHeaderTypeDef RxHeader;
@@ -103,6 +86,28 @@ public:
   ~BusAnalizer(void){;};;
 };
 #endif
+/* USER CODE END EM */
+
+/* Exported functions prototypes ---------------------------------------------*/
+void Error_Handler(void);
+
+/* USER CODE BEGIN EFP */
+
+/* USER CODE END EFP */
+
+/* Private defines -----------------------------------------------------------*/
+#define FD1_STBM_Pin GPIO_PIN_3
+#define FD1_STBM_GPIO_Port GPIOA
+#define FD2_STBM_Pin GPIO_PIN_4
+#define FD2_STBM_GPIO_Port GPIOA
+/* USER CODE BEGIN Private defines */
+
+/* USER CODE END Private defines */
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __MAIN_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

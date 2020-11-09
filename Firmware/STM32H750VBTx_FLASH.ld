@@ -151,7 +151,7 @@ SECTIONS
 
   
   /* Uninitialized data section */
-  . = ALIGN(16);
+  . = ALIGN(4);
   .bss :
   {
     /* This is used by the startup in order to initialize the .bss secion */
@@ -161,22 +161,20 @@ SECTIONS
     *(.bss*)
     *(COMMON)
 
-    . = ALIGN(16);
+    . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
   } >DTCMRAM
 
-
-  
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
   {
-    . = ALIGN(16);
+    . = ALIGN(8);
     PROVIDE ( end = . );
     PROVIDE ( _end = . );
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
-    . = ALIGN(16);
+    . = ALIGN(8);
   } >DTCMRAM
 
   

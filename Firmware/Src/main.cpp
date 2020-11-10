@@ -172,7 +172,7 @@ void BusAnalizer::Run(void)
 		}
 		do
 		{
-		  ui8ErrorUSB = CDC_Transmit_HS(static_cast<unsigned char *>(sText),512);
+		  ui8ErrorUSB = CDC_Transmit_HS(static_cast<unsigned char *>(sText),2048);
 		  if (ui8ErrorUSB != USBD_OK) ui32USBerrors++;
 		}while (ui8ErrorUSB != USBD_OK);
 		GPIOB->ODR ^=0x1;
@@ -758,7 +758,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM1) {
 	    sBussAnalizer.IncrementMessageTrigger();
-	    if ((sBussAnalizer.Getui16MessageTrigger()%40) == 0)
+	    if ((sBussAnalizer.Getui16MessageTrigger()%30) == 0)
 	    {
 	    	sBussAnalizer.SetMessageTriggerFlag(true);
 	    };

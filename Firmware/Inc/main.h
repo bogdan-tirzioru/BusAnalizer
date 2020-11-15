@@ -63,6 +63,8 @@ private:
 	uint32_t ui32TimerValue =0;
 	uint32_t ui32USBerrors =0;
 	bool ui8SetRequestToUsbCAN1 =false;
+	uint32_t ui32DeltameasureTransmit=0;
+	uint32_t ui32DeltameasureTransmitMax =0;
 public:
   BusAnalizer(void);
   void Run(void);

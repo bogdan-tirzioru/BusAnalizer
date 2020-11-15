@@ -170,11 +170,15 @@ void BusAnalizer::Run(void)
 		{
 			sText[ui8Index +ui8IndexOffset] = RxData[ui8Index];
 		}
+		uint32_t lui32DeltameasureTransmit = __HAL_TIM_GET_COUNTER(&htim2);
 		do
 		{
 		  ui8ErrorUSB = CDC_Transmit_HS(static_cast<unsigned char *>(sText),2048);
 		  if (ui8ErrorUSB != USBD_OK) ui32USBerrors++;
 		}while (ui8ErrorUSB != USBD_OK);
+		ui32DeltameasureTransmit = __HAL_TIM_GET_COUNTER(&htim2) -lui32DeltameasureTransmit;
+		if (ui32DeltameasureTransmit>ui32DeltameasureTransmitMax)
+			ui32DeltameasureTransmitMax = ui32DeltameasureTransmit;
 		GPIOB->ODR ^=0x1;
 		ui8SetRequestToUsbCAN1 =false;
 	}

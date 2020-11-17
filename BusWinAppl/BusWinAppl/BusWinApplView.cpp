@@ -262,10 +262,10 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 	{
 		mynewStr = mynewStr + emptystr + std::to_wstring(myCANId);
 	}
-	for (BYTE ui8LocalIndex = 10; ui8LocalIndex<(10 + mypdulength); ui8LocalIndex++)
+	for (WORD ui16LocalIndex = 10; ui16LocalIndex<(10 + mypdulength); ui16LocalIndex++)
 	{
 		std::wstring mylocalstr;
-		BYTE var = localBuffur[ui8LocalIndex];
+		BYTE var = localBuffur[ui16LocalIndex];
 		if (bPDUhexView)
 		{
 			mylocalstr = ByteTohexStr(var);

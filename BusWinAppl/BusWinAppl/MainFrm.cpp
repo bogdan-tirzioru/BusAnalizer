@@ -424,7 +424,7 @@ UINT  OneShoutRead(LPVOID Param)
 	//Please note that all the following is just test code to exercise the CSerialPort API. It assumes
 	//that a COM1 is available on the local computer.
 	std::vector<BYTE> buf;
-	buf.resize(10000);
+	buf.resize(2048);
 	for (auto& b : buf)
 		b = '%';
 	HANDLE hEvent = nullptr;
@@ -448,7 +448,7 @@ UINT  OneShoutRead(LPVOID Param)
 				try
 			{
 	#pragma warning(suppress: 26472 26486)
-				port2.Write(buf.data(), static_cast<DWORD>(buf.size()), overlapped);
+				//port2.Write(buf.data(), static_cast<DWORD>(buf.size()), overlapped);
 			}
 	#pragma warning(suppress: 26496)
 			catch (CSerialException& e)

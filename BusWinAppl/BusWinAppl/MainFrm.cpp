@@ -541,6 +541,6 @@ UINT  OneShoutRead(LPVOID Param)
 void CMainFrame::OnConnectStop()
 {
 	// TODO: Add your command handler code here
-	int b_Stop = true;
+	b_Stop = true;
 	AfxMessageBox(_T("Close connection"));
 }

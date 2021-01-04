@@ -761,7 +761,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM1) {
 	    sBussAnalizer.IncrementMessageTrigger();
-	    if ((sBussAnalizer.Getui16MessageTrigger()%4) == 0)
+	    if ((sBussAnalizer.Getui16MessageTrigger()%5) == 0)
 	    {
 	    	sBussAnalizer.SetMessageTriggerFlag(true);
 	    };

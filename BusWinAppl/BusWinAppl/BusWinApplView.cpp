@@ -224,7 +224,7 @@ void CBusWinApplView::TransformBuffer(LPCTSTR &mystr, std::vector<BYTE> localBuf
 {
 	LPCTSTR  pch = nullptr;
 	LPCTSTR  pch1 = nullptr;
-	pch = new TCHAR[1000];
+	//pch = new TCHAR[1000];
 	std::wstring mynewStr(_T(""));
 	std::wstring emptystr(_T(" "));
 	std::wstring douapuncte(_T(":"));

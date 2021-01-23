@@ -1,0 +1,11 @@
+Output: Generates pick and place files
+Type  : Pick Place
+From  : Variant [[No Variations]] of Project [MB1280_Fanout.PrjPCB]
+   Generated File[Pick Place for MB1280.txt]
+   Generated File[Pick Place for MB1280.csv]
+
+
+Files Generated   : 2
+Documents Printed : 0
+
+Finished Output Generation At 4:40:57 PM On 5/10/2016

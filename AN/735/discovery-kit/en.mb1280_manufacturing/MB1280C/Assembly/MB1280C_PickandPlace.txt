@@ -1,0 +1,38 @@
+Altium Designer Pick and Place Locations
+C:\Subversion\MB1280-STMod+Fanout\Trunk\02-Manufacturing\MB1280C_PCB\Assembly\MB1280C_PickandPlace.txt
+
+========================================================================================================================
+File Design Information:
+
+Date:       19/09/19
+Time:       08:58
+Revision:   42
+Variant:    No variations
+Units used: mm
+
+Designator Comment                        Layer    Footprint                               Center-X(mm) Center-Y(mm) Rotation Description                                                                       
+CN1        "Header 10x2 STMod+"           TopLayer CON_SAMTEC_TMM-110-01-L-D-RA__STMOD+    29.2100      -3.7940      180      "Header 10x2, 2mm, RA, TH, Height 3.20mm/3.50mm"                                  
+U1         LDK120M33R                     TopLayer REG_SOT23-5L                            27.0550      -10.1600     270      "200 mA low quiescent current very low noise LDO"                                 
+C5         Capacitor                      TopLayer C0603                                   31.7515      -12.7000     180      "Capacitor, MLCC, 10nF, 50V, X7R, 10%, 0603, T=0.8mm"                             
+C2         Capacitor                      TopLayer C0603_H0P8                              23.4950      -10.1600     90       "Capacitor,1uF,50V,X5R,10%,0603, T=0.8mm"                                         
+C3         Capacitor                      TopLayer C0603_H0P8                              31.1150      -10.2250     90       "Capacitor,1uF,50V,X5R,10%,0603, T=0.8mm"                                         
+C1         Capacitor                      TopLayer C0603                                   22.2250      -10.1600     90       "Capacitor, MLCC, 100nF, 16V, X7R, 10%, 0603, T=0,8mm"                            
+C4         Capacitor                      TopLayer C0603                                   32.3850      -10.2250     90       "Capacitor, MLCC, 100nF, 16V, X7R, 10%, 0603, T=0,8mm"                            
+CN3        "Header 4x1"                   TopLayer CON_988-JIUBABA_A2006LF-04A             50.2700      -8.0800      90       "Header 4x1, 2mm, VR, SMT"                                                        
+CN12       "Header 10x1"                  TopLayer CON_SAMTEC_TSW-110-14-G-S               41.2750      -30.4800     90       "Header 10x1, 2,54mm height  10.67mm"                                             
+CN9        "Header 10x1"                  TopLayer CON_SAMTEC_TSW-110-14-G-S               13.3350      -30.4800     90       "Header 10x1, 2,54mm height  10.67mm"                                             
+CN11       "Socket 8x1"                   TopLayer CON_SAMTEC_SSW-108-01-X-S               38.7350      -33.0200     90       "Socket 8x1, 2.54mm, VR, TH, height 8.51/2.64mm"                                  
+CN10       "Socket 8x1"                   TopLayer CON_SAMTEC_SSW-108-01-X-S               15.8750      -33.0200     90       "Socket 8x1, 2.54mm, VR, TH, height 8.51/2.64mm"                                  
+JP1        "Jumper_Header 3x1 Fitted 2-3" TopLayer CON_SAMTEC_TSW-103-07-F-S               24.1300      -13.9700     360      "Header, 3x1, 2,54mm, VR, TH, Height 5.84mm/2.54mm - Shunt Fitted 2-3 by default" 
+R1         Resistor                       TopLayer R0603                                   38.7365      -14.6050     0        Resistor,4K7,0603,1%,1/10W                                                        
+R2         Resistor                       TopLayer R0603                                   43.1800      -14.6050     0        Resistor,4K7,0603,1%,1/10W                                                        
+SB2        SB_ON                          TopLayer SOLDER-BRIDGE_R0603-0R                  42.7140      -8.2550      360      "Solder Bridge ON"                                                                
+SB1        SB_ON                          TopLayer SOLDER-BRIDGE_R0603-0R                  38.3120      -8.2550      360      "Solder Bridge ON"                                                                
+T2         BSN20                          TopLayer MOS_SOT23                               42.8650      -11.6000     180      "N-channel enhancement mode field-effect transistor"                              
+T1         BSN20                          TopLayer MOS_SOT23                               38.3540      -11.5140     180      "N-channel enhancement mode field-effect transistor"                              
+CN2        "Header 4x1"                   TopLayer CON_988-JIUBABA_A2006LF-04A             13.8650      -8.6200      270      "Header 4x1, 2mm, VR, SMT"                                                        
+CN4        "Socket 4x2"                   TopLayer CON_SAMTEC_SSW-104-01-X-D               5.0800       -12.7000     270      "Socket 4x2,2.54mm,VR,TH, height 8.51/2.64mm"                                     
+CN5        "Header 2x1"                   TopLayer CON_988-JIUBABA_PHFS25-11-02-G0B115-T-1 4.4450       -21.5900     180      "Header, 2x1, 2.54mm, VR, TH, Height 6mm/3mm"                                     
+CN6        "Header 2x1"                   TopLayer CON_988-JIUBABA_PHFS25-11-02-G0B115-T-1 50.1650      -21.5900     180      "Header, 2x1, 2.54mm, VR, TH, Height 6mm/3mm"                                     
+CN7        "Header 2x1"                   TopLayer CON_988-JIUBABA_PHFS25-11-02-G0B115-T-1 4.4450       -25.4000     180      "Header, 2x1, 2.54mm, VR, TH, Height 6mm/3mm"                                     
+CN8        "Header 2x1"                   TopLayer CON_988-JIUBABA_PHFS25-11-02-G0B115-T-1 50.1650      -25.4000     180      "Header, 2x1, 2.54mm, VR, TH, Height 6mm/3mm"                                     

@@ -92,6 +92,14 @@ DocumentUniqueId=
 DocumentPath=Project Outputs for BusAnalizer\Design Rule Check - busanaliz.html
 DItemRevisionGUID=
 
+[SearchPath1]
+Path=C:\Users\Public\Documents\Altium\AD18\Library\*.*
+IncludeSubFolders=1
+
+[SearchPath2]
+Path=..\*.*
+IncludeSubFolders=1
+
 [Configuration1]
 Name=Sources
 ParameterCount=0

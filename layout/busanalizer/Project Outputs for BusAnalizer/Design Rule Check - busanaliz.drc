@@ -1,27 +1,31 @@
 Protel Design System Design Rule Check
 PCB File : D:\gitRepos\BusAnalizer\layout\busanalizer\busanaliz.PcbDoc
-Date     : 1/30/2021
-Time     : 1:04:30 PM
+Date     : 1/31/2021
+Time     : 3:53:03 PM
 
 Processing Rule : Clearance Constraint (Gap=0.2mm) (All),(All)
-Rule Violations :0
+   Violation between Clearance Constraint: (0.161mm < 0.2mm) Between Pad Free-15(64.389mm,50.927mm) on Component Side And Track (64.9mm,47.568mm)(64.9mm,51.559mm) on Component Side 
+   Violation between Clearance Constraint: (0.045mm < 0.2mm) Between Pad J1-10(1.725mm,64.336mm) on Component Side And Track (0.127mm,0.127mm)(0.127mm,70.993mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Pad J1-9(1.003mm,51.092mm) on Component Side And Track (0.127mm,0.127mm)(0.127mm,70.993mm) on Keep-Out Layer 
+   Violation between Clearance Constraint: (0.176mm < 0.2mm) Between Track (0.127mm,0.127mm)(0.127mm,70.993mm) on Keep-Out Layer And Track (1.003mm,51.092mm)(1.725mm,51.813mm) on Component Side 
+   Violation between Clearance Constraint: (Collision < 0.2mm) Between Track (63.754mm,29.21mm)(66.675mm,29.21mm) on Component Side And Track (65.786mm,28.067mm)(65.786mm,30.099mm) on Component Side 
+Rule Violations :5
 
 Processing Rule : Short-Circuit Constraint (Allowed=No) (All),(All)
-Rule Violations :0
+   Violation between Short-Circuit Constraint: Between Track (63.754mm,29.21mm)(66.675mm,29.21mm) on Component Side And Track (65.786mm,28.067mm)(65.786mm,30.099mm) on Component Side Location : [X = 0mm][Y = 0mm]
+Rule Violations :1
 
 Processing Rule : Un-Routed Net Constraint ( (All) )
-   Violation between Un-Routed Net Constraint: Net OCTO_IO2 Between Via (45.339mm,13.208mm) from Component Side to Solder Side And Track (46.355mm,14.351mm)(46.736mm,14.732mm) on Component Side 
-Rule Violations :1
+Rule Violations :0
 
 Processing Rule : Modified Polygon (Allow modified: No), (Allow shelved: No)
 Rule Violations :0
 
 Processing Rule : Width Constraint (Min=0.2mm) (Max=0.6mm) (Preferred=0.2mm) (All)
    Violation between Width Constraint: Track (103.771mm,22.251mm)(104.775mm,21.247mm) on Component Side Actual Width = 0mm, Target Width = 0.2mm
-   Violation between Width Constraint: Track (46.355mm,14.351mm)(46.736mm,14.732mm) on Component Side Actual Width = 0mm, Target Width = 0.2mm
    Violation between Width Constraint: Track (65.786mm,28.067mm)(65.786mm,30.099mm) on Component Side Actual Width = 0mm, Target Width = 0.2mm
    Violation between Width Constraint: Track (82.931mm,16.637mm)(83.185mm,16.637mm) on Component Side Actual Width = 0mm, Target Width = 0.2mm
-Rule Violations :4
+Rule Violations :3
 
 Processing Rule : Power Plane Connect Rule(Relief Connect )(Expansion=0.508mm) (Conductor Width=0.254mm) (Air Gap=0.254mm) (Entries=4) (All)
 Rule Violations :0
@@ -308,18 +312,16 @@ Rule Violations :6
 
 Processing Rule : Net Antennae (Tolerance=0mm) (All)
    Violation between Net Antennae: Track (103.771mm,22.251mm)(104.775mm,21.247mm) on Component Side 
-   Violation between Net Antennae: Track (46.355mm,14.351mm)(46.736mm,14.732mm) on Component Side 
-   Violation between Net Antennae: Track (46.355mm,14.351mm)(46.736mm,14.732mm) on Component Side 
    Violation between Net Antennae: Track (65.786mm,28.067mm)(65.786mm,30.099mm) on Component Side 
    Violation between Net Antennae: Track (65.786mm,28.067mm)(65.786mm,30.099mm) on Component Side 
    Violation between Net Antennae: Track (82.931mm,16.637mm)(83.185mm,16.637mm) on Component Side 
    Violation between Net Antennae: Track (82.931mm,16.637mm)(83.185mm,16.637mm) on Component Side 
-Rule Violations :7
+Rule Violations :5
 
 Processing Rule : Height Constraint (Min=0mm) (Max=25.4mm) (Prefered=12.7mm) (All)
 Rule Violations :0
 
 
-Violations Detected : 277
+Violations Detected : 279
 Waived Violations : 0
 Time Elapsed        : 00:00:01

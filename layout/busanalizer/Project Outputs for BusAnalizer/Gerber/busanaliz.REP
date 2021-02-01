@@ -2,17 +2,111 @@
 FileName = busanaliz.GBR
 AutoAperture = True
 *************************************************************
-Generating : Top Solder
-      File : busanaliz.GTS
+Generating : Mechanical 27
+      File : busanaliz.GM27
 
-    Adding Layer      : Top Solder
+    Adding Layer      : Mechanical 27
 
-    Adding Layer      : Top Layer
+
+Used DCodes :
+    D16
+*************************************************************
+
+*************************************************************
+Generating : Keep-Out Layer
+      File : busanaliz.GKO
+
+    Adding Layer      : Keep-Out Layer
+
+
+Used DCodes :
+    D141
+*************************************************************
+
+*************************************************************
+Generating : Bottom Solder
+      File : busanaliz.GBS
+
+    Adding Layer      : Bottom Solder
+
+    Adding Layer      : Solder Side
 
     Adding Layer      : Multi-Layer
 
 
 Used DCodes :
+    D53
+    D54
+    D55
+    D66
+    D83
+    D84
+    D85
+    D86
+    D87
+    D88
+    D89
+    D90
+    D91
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 37
+      File : busanaliz.GM37
+
+    Adding Layer      : Mechanical 37
+
+
+Used DCodes :
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 6
+      File : busanaliz.GM6
+
+    Adding Layer      : Mechanical 6
+
+
+Used DCodes :
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+*************************************************************
+
+*************************************************************
+Generating : Top Pad Master
+      File : busanaliz.GPT
+
+    Adding Layer      : Component Side
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
     D40
     D41
     D42
@@ -25,24 +119,14 @@ Used DCodes :
     D49
     D50
     D51
-    D52
-    D53
-    D54
-    D55
-    D56
-    D57
-    D58
-    D59
-    D60
-    D61
-    D62
-    D63
-    D64
-    D65
-    D66
-    D67
-    D68
-    D69
+    D86
+    D96
+    D97
+    D98
+    D99
+    D100
+    D101
+    D102
 *************************************************************
 
 *************************************************************
@@ -53,50 +137,96 @@ Generating : Mechanical 16
 
 
 Used DCodes :
-    D11
     D12
     D13
-    D14
     D15
-    D90
-    D91
-    D92
-    D93
-    D94
-    D95
-    D96
-    D97
-    D98
-    D99
-    D100
-    D101
-    D102
-    D103
-    D104
-    D105
-    D106
-    D107
-    D108
-    D109
-    D110
-    D111
-    D112
-    D113
+    D16
+    D17
     D114
     D115
+    D116
+    D117
+    D118
+    D119
+    D120
+    D121
+    D122
+    D123
+    D124
+    D125
+    D126
+    D127
+    D128
+    D129
+    D130
+    D131
+    D132
+    D133
+    D134
+    D135
+    D136
+    D137
+    D138
+    D139
+    D140
 *************************************************************
 
 *************************************************************
-Generating : Mechanical 13
-      File : busanaliz.GM13
+Generating : Top Paste
+      File : busanaliz.GTP
 
-    Adding Layer      : Mechanical 13
+    Adding Layer      : Top Paste
+
+    Adding Layer      : Component Side
+
+    Adding Layer      : Multi-Layer
 
 
 Used DCodes :
-    D87
-    D88
-    D89
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 15
+      File : busanaliz.GM15
+
+    Adding Layer      : Mechanical 15
+
+
+Used DCodes :
+    D12
+    D111
+    D113
 *************************************************************
 
 *************************************************************
@@ -115,131 +245,44 @@ Generating : Bottom Paste
 
     Adding Layer      : Bottom Paste
 
-    Adding Layer      : Bottom Layer
+    Adding Layer      : Solder Side
 
     Adding Layer      : Multi-Layer
 
 
 Used DCodes :
-    D25
-    D26
-*************************************************************
-
-*************************************************************
-Generating : Bottom Solder
-      File : busanaliz.GBS
-
-    Adding Layer      : Bottom Solder
-
-    Adding Layer      : Bottom Layer
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D46
-    D47
-    D61
-    D62
-    D63
-    D64
-    D65
-    D66
-    D67
-    D68
-    D69
-*************************************************************
-
-*************************************************************
-Generating : Mechanical 27
-      File : busanaliz.GM27
-
-    Adding Layer      : Mechanical 27
-
-
-Used DCodes :
-    D14
-*************************************************************
-
-*************************************************************
-Generating : Top Paste
-      File : busanaliz.GTP
-
-    Adding Layer      : Top Paste
-
-    Adding Layer      : Top Layer
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D19
-    D20
-    D21
     D22
     D23
     D24
-    D25
-    D26
-    D27
-    D28
-    D29
-    D30
-    D31
-    D32
-    D33
-    D34
     D35
-    D36
-    D37
-    D38
-    D39
 *************************************************************
 
 *************************************************************
-Generating : Top Layer
-      File : busanaliz.GTL
+Generating : Solder Side
+      File : busanaliz.GBL
 
-    Adding Layer      : Top Layer
+    Adding Layer      : Solder Side
 
     Adding Layer      : Multi-Layer
 
 
 Used DCodes :
     D10
-    D16
     D19
-    D20
-    D21
     D22
     D23
     D24
-    D25
-    D26
-    D27
-    D28
-    D29
-    D30
-    D31
-    D32
-    D33
-    D34
     D35
-    D36
-    D37
-    D38
-    D39
-    D64
-    D70
-    D71
-    D72
-    D73
-    D74
-    D75
-    D76
-    D77
-    D78
-    D79
+    D86
+    D94
+    D96
+    D97
+    D98
+    D99
+    D100
+    D101
+    D102
+    D103
 *************************************************************
 
 *************************************************************
@@ -259,53 +302,34 @@ Used DCodes :
     D16
     D17
     D18
-*************************************************************
-
-*************************************************************
-Generating : Bottom Overlay
-      File : busanaliz.GBO
-
-    Adding Layer      : Bottom Overlay
-
-
-Used DCodes :
-    D16
-*************************************************************
-
-*************************************************************
-Generating : Bottom Pad Master
-      File : busanaliz.GPB
-
-    Adding Layer      : Bottom Layer
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D25
-    D26
-    D64
-    D72
-    D73
-    D74
-    D75
-    D76
-    D77
-    D78
-*************************************************************
-
-*************************************************************
-Generating : Top Pad Master
-      File : busanaliz.GPT
-
-    Adding Layer      : Top Layer
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
     D19
     D20
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 13
+      File : busanaliz.GM13
+
+    Adding Layer      : Mechanical 13
+
+
+Used DCodes :
+    D111
+    D112
+*************************************************************
+
+*************************************************************
+Generating : Component Side
+      File : busanaliz.GTL
+
+    Adding Layer      : Component Side
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D10
+    D19
     D21
     D22
     D23
@@ -325,42 +349,64 @@ Used DCodes :
     D37
     D38
     D39
-    D64
-    D72
-    D73
-    D74
-    D75
-    D76
-    D77
-    D78
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+    D86
+    D92
+    D93
+    D94
+    D95
+    D96
+    D97
+    D98
+    D99
+    D100
+    D101
+    D102
+    D103
 *************************************************************
 
 *************************************************************
-Generating : Mechanical 37
-      File : busanaliz.GM37
+Generating : Top Solder
+      File : busanaliz.GTS
 
-    Adding Layer      : Mechanical 37
+    Adding Layer      : Top Solder
 
-
-Used DCodes :
-    D11
-*************************************************************
-
-*************************************************************
-Generating : Bottom Layer
-      File : busanaliz.GBL
-
-    Adding Layer      : Bottom Layer
+    Adding Layer      : Component Side
 
     Adding Layer      : Multi-Layer
 
 
 Used DCodes :
-    D10
-    D16
-    D25
-    D26
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+    D58
+    D59
+    D60
+    D61
+    D62
+    D63
     D64
+    D65
+    D66
+    D67
+    D68
+    D69
+    D70
     D71
     D72
     D73
@@ -370,16 +416,6 @@ Used DCodes :
     D77
     D78
     D79
-*************************************************************
-
-*************************************************************
-Generating : Mechanical 6
-      File : busanaliz.GM6
-
-    Adding Layer      : Mechanical 6
-
-
-Used DCodes :
     D80
     D81
     D82
@@ -387,28 +423,45 @@ Used DCodes :
     D84
     D85
     D86
-*************************************************************
-
-*************************************************************
-Generating : Mechanical 15
-      File : busanaliz.GM15
-
-    Adding Layer      : Mechanical 15
-
-
-Used DCodes :
-    D11
+    D87
     D88
+    D89
+    D90
+    D91
 *************************************************************
 
 *************************************************************
-Generating : Keep-Out Layer
-      File : busanaliz.GKO
+Generating : Bottom Overlay
+      File : busanaliz.GBO
 
-    Adding Layer      : Keep-Out Layer
+    Adding Layer      : Bottom Overlay
 
 
 Used DCodes :
-    D10
+    D19
+*************************************************************
+
+*************************************************************
+Generating : Bottom Pad Master
+      File : busanaliz.GPB
+
+    Adding Layer      : Solder Side
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D22
+    D23
+    D24
+    D35
+    D86
+    D96
+    D97
+    D98
+    D99
+    D100
+    D101
+    D102
 *************************************************************
 

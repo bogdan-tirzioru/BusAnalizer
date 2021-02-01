@@ -72,7 +72,7 @@ GenerateClassCluster=0
 DocumentUniqueId=XOEVIQWF
 
 [Document3]
-DocumentPath=Job1.OutJob
+DocumentPath=BusAnalizer.OutJob
 AnnotationEnabled=1
 AnnotateStartValue=1
 AnnotationIndexControlEnabled=0
@@ -89,6 +89,94 @@ GenerateClassCluster=0
 DocumentUniqueId=
 
 [GeneratedDocument1]
+DocumentPath=Project Outputs for BusAnalizer\BOM\Bill of Materials-busanalizer.xlsx
+DItemRevisionGUID=
+
+[GeneratedDocument2]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.EXTREP
+DItemRevisionGUID=
+
+[GeneratedDocument3]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GBL
+DItemRevisionGUID=
+
+[GeneratedDocument4]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GBO
+DItemRevisionGUID=
+
+[GeneratedDocument5]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GBP
+DItemRevisionGUID=
+
+[GeneratedDocument6]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GBS
+DItemRevisionGUID=
+
+[GeneratedDocument7]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GKO
+DItemRevisionGUID=
+
+[GeneratedDocument8]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM1
+DItemRevisionGUID=
+
+[GeneratedDocument9]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM6
+DItemRevisionGUID=
+
+[GeneratedDocument10]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM13
+DItemRevisionGUID=
+
+[GeneratedDocument11]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM15
+DItemRevisionGUID=
+
+[GeneratedDocument12]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM16
+DItemRevisionGUID=
+
+[GeneratedDocument13]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM27
+DItemRevisionGUID=
+
+[GeneratedDocument14]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GM37
+DItemRevisionGUID=
+
+[GeneratedDocument15]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GPB
+DItemRevisionGUID=
+
+[GeneratedDocument16]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GPT
+DItemRevisionGUID=
+
+[GeneratedDocument17]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GTL
+DItemRevisionGUID=
+
+[GeneratedDocument18]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GTO
+DItemRevisionGUID=
+
+[GeneratedDocument19]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GTP
+DItemRevisionGUID=
+
+[GeneratedDocument20]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.GTS
+DItemRevisionGUID=
+
+[GeneratedDocument21]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.REP
+DItemRevisionGUID=
+
+[GeneratedDocument22]
+DocumentPath=Project Outputs for BusAnalizer\Gerber\busanaliz.RUL
+DItemRevisionGUID=
+
+[GeneratedDocument23]
 DocumentPath=Project Outputs for BusAnalizer\Design Rule Check - busanaliz.html
 DItemRevisionGUID=
 

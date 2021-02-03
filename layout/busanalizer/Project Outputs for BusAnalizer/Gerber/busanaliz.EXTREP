@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
-Gerber File Extension Report For: busanaliz.GBR   2/1/2021  4:22:32 PM
+Gerber File Extension Report For: busanaliz.GBR   2/3/2021  8:00:28 PM
 ------------------------------------------------------------------------------------------
 
 
@@ -7,21 +7,21 @@ Gerber File Extension Report For: busanaliz.GBR   2/1/2021  4:22:32 PM
 Layer Extension     Layer Description                      
 ------------------------------------------------------------------------------------------
 .GTL                Component Side                          
-.GPT                Top Pad Master                          
-.GTS                Top Solder                              
-.GTO                Top Overlay                             
-.GTP                Top Paste                               
-.GPB                Bottom Pad Master                       
 .GBS                Bottom Solder                           
-.GBL                Solder Side                             
+.GPB                Bottom Pad Master                       
+.GPT                Top Pad Master                          
+.GTO                Top Overlay                             
 .GBP                Bottom Paste                            
+.GTP                Top Paste                               
+.GBL                Solder Side                             
 .GBO                Bottom Overlay                          
-.GM1                Mechanical 1                            
-.GM15               Mechanical 15                           
-.GM13               Mechanical 13                           
-.GM27               Mechanical 27                           
+.GTS                Top Solder                              
 .GKO                Keep-Out Layer                          
+.GM1                Mechanical 1                            
+.GM13               Mechanical 13                           
+.GM16               Mechanical 16                           
+.GM15               Mechanical 15                           
+.GM27               Mechanical 27                           
 .GM6                Mechanical 6                            
 .GM37               Mechanical 37                           
-.GM16               Mechanical 16                           
 ------------------------------------------------------------------------------------------

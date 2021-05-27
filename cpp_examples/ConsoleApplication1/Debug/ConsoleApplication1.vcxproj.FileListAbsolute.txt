@@ -1,0 +1,2 @@
+E:\myproject\BusAnalizer\cpp_examples\ConsoleApplication1\Debug\ConsoleApplication1.exe
+E:\myproject\BusAnalizer\cpp_examples\ConsoleApplication1\Debug\ConsoleApplication1.pdb

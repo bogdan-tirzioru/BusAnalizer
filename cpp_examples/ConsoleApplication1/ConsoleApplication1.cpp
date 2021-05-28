@@ -15,7 +15,7 @@ public:
     friend float ConvertGreutate(Animal a);
     float GetGreutate(void) { return greutate; };
     void SetGreutate(float lgreutate) { greutate = lgreutate; };
-    friend class Urs;
+    friend class Urs; 
 };
 
 float ConvertGreutate(Animal a)

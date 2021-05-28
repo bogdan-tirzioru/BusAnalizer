@@ -5,7 +5,7 @@
 
 constexpr float cFactor = 2.2046F; /*text*/ /*kg->pound*/
 const float CFactor1 = 3.5; /*dataini*/
-//class Urs; /*declaratie*/
+class Urs; /*declaratie*/
 class Animal
 {
     float greutate;
@@ -22,13 +22,14 @@ float ConvertGreutate(Animal a)
 {
     return a.greutate * cFactor;
 }
-typedef enum class Blana { alba, verde, neagra } TBlana;
+
 class Urs
 {
     float total;
 public:
-    TBlana tipbl;
-    Urs(enum Blana b, Animal a)
+    enum class Blana { alba, verde, neagra };
+    Blana tipbl;
+    Urs(Blana b, Animal a)
     {
         tipbl = b;
         total = a.greutate + 0.5;
@@ -37,7 +38,10 @@ public:
 int main()
 {
     Animal a1(10);
-    Urs u1(static_cast<TBlana>(1), a1);
+    Urs u1(Urs::Blana::alba, a1);
+    Urs::Blana bl = Urs::Blana::alba;
+    int conv = static_cast<int>(bl);
+    //int conv1 = bl;
     std::cout << ConvertGreutate(a1)<<"\n";
 }
 

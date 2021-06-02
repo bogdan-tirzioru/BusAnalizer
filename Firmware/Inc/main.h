@@ -29,6 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal.h"
+#include "GPIO.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,6 +49,9 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 #ifdef __cplusplus
+
+
+
 class BusAnalizer{
 private:
 	FDCAN_RxHeaderTypeDef RxHeader;
@@ -55,7 +59,9 @@ private:
 	uint8_t FixedTxData[8];
 	unsigned char sText[100];
 	FDCAN_TxHeaderTypeDef FixedTxHeader;
-
+public:
+	gpio GPIO_1;
+private:
 	uint16_t ui16MessageTrigger =0;
 	uint32_t ui32CounterTransmisionErrorCAN1=0;
 	uint8_t ui8ErrorTransmisionCAN1 =0;
@@ -76,7 +82,7 @@ public:
   void MX_SPI1_Init(void);
   void MX_TIM2_Init(void);
   void MX_USART1_UART_Init(void);
-  void MX_GPIO_Init(void);
+  //void MX_GPIO_Init(void);
   void Error_Handler(void);
   FDCAN_RxHeaderTypeDef *GetRxHeadearPointer(void){ return &(this->RxHeader);};
   uint8_t *GetRxDataPointer(void){return this->RxData;};

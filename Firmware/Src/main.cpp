@@ -71,7 +71,6 @@ extern TIM_HandleTypeDef        htim1;
 BusAnalizer sBussAnalizer;
 /* USER CODE END 0 */
 
-
 BusAnalizer::BusAnalizer(void)
 {
 	/* Enable I-Cache---------------------------------------------------------*/
@@ -97,7 +96,9 @@ BusAnalizer::BusAnalizer(void)
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
+	GPIO_1.gpio_init();
+
+	//MX_GPIO_Init();
 	MX_FDCAN1_Init();
 	MX_FDCAN2_Init();
 	MX_I2C1_Init();
@@ -658,6 +659,8 @@ void BusAnalizer::MX_USART1_UART_Init(void)
   * @param None
   * @retval None
   */
+
+
 void BusAnalizer::MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -780,6 +783,8 @@ int main(void)
 	sBussAnalizer.Run();
   }
 }
+
+
 
 #ifdef  USE_FULL_ASSERT
 /**

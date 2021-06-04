@@ -17,31 +17,31 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, DATA
   6 .data         000001e8  20000000  08009420  00020000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  7 .bss          00001d5c  200001e8  08009608  000201e8  2**2
+  7 .bss          00001d60  200001e8  08009608  000201e8  2**2
                   ALLOC
-  8 ._user_heap_stack 00002404  20001f44  08009608  00021f44  2**0
+  8 ._user_heap_stack 00002400  20001f48  08009608  00021f48  2**0
                   ALLOC
   9 .ARM.attributes 0000002e  00000000  00000000  000201e8  2**0
                   CONTENTS, READONLY
- 10 .debug_info   0004973f  00000000  00000000  00020216  2**0
+ 10 .debug_info   00049851  00000000  00000000  00020216  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 11 .debug_abbrev 000067a5  00000000  00000000  00069955  2**0
+ 11 .debug_abbrev 000067c4  00000000  00000000  00069a67  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 12 .debug_loc    0001efdf  00000000  00000000  000700fa  2**0
+ 12 .debug_loc    0001efdf  00000000  00000000  0007022b  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_aranges 00002010  00000000  00000000  0008f0e0  2**3
+ 13 .debug_aranges 00002010  00000000  00000000  0008f210  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_ranges 00001ed8  00000000  00000000  000910f0  2**3
+ 14 .debug_ranges 00001ef0  00000000  00000000  00091220  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_macro  00041bf4  00000000  00000000  00092fc8  2**0
+ 15 .debug_macro  00041bf4  00000000  00000000  00093110  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_line   00031c78  00000000  00000000  000d4bbc  2**0
+ 16 .debug_line   00031c86  00000000  00000000  000d4d04  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_str    00180b75  00000000  00000000  00106834  2**0
+ 17 .debug_str    00180bd0  00000000  00000000  0010698a  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .comment      00000053  00000000  00000000  002873a9  2**0
+ 18 .comment      00000053  00000000  00000000  0028755a  2**0
                   CONTENTS, READONLY
- 19 .debug_frame  00005f58  00000000  00000000  002873fc  2**2
+ 19 .debug_frame  00005f58  00000000  00000000  002875b0  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -503,7 +503,7 @@ __weak void HAL_IncTick(void)
  80006e0:	4770      	bx	lr
  80006e2:	bf00      	nop
  80006e4:	20000000 	.word	0x20000000
- 80006e8:	2000060c 	.word	0x2000060c
+ 80006e8:	20000610 	.word	0x20000610
 
 080006ec <HAL_GetTick>:
   *       implementations in user file.
@@ -517,7 +517,7 @@ __weak uint32_t HAL_GetTick(void)
 }
  80006f0:	4770      	bx	lr
  80006f2:	bf00      	nop
- 80006f4:	2000060c 	.word	0x2000060c
+ 80006f4:	20000610 	.word	0x20000610
 
 080006f8 <HAL_Delay>:
   *       implementations in user file.
@@ -17114,6 +17114,12 @@ __STATIC_INLINE void SCB_EnableICache (void)
 BusAnalizer sBussAnalizer;
  8007776:	4802      	ldr	r0, [pc, #8]	; (8007780 <_Z41__static_initialization_and_destruction_0ii+0x1c>)
  8007778:	f7ff ff6c 	bl	8007654 <_ZN11BusAnalizerC1Ev>
+{
+private:
+	// No private members so far
+public:
+	// Constructor
+	AGpio(void) {;};
  800777c:	e7fa      	b.n	8007774 <_Z41__static_initialization_and_destruction_0ii+0x10>
  800777e:	bf00      	nop
  8007780:	20000518 	.word	0x20000518
@@ -17422,7 +17428,7 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* hfdcan)
  8007986:	bf00      	nop
  8007988:	4000a000 	.word	0x4000a000
  800798c:	4000a400 	.word	0x4000a400
- 8007990:	200005f8 	.word	0x200005f8
+ 8007990:	200005fc 	.word	0x200005fc
  8007994:	58024400 	.word	0x58024400
  8007998:	58020000 	.word	0x58020000
  800799c:	58020400 	.word	0x58020400
@@ -17796,7 +17802,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
  8007bca:	e7f8      	b.n	8007bbe <HAL_InitTick+0x62>
  8007bcc:	58024400 	.word	0x58024400
  8007bd0:	431bde83 	.word	0x431bde83
- 8007bd4:	20000610 	.word	0x20000610
+ 8007bd4:	20000614 	.word	0x20000614
  8007bd8:	40010000 	.word	0x40010000
 
 08007bdc <NMI_Handler>:
@@ -17935,7 +17941,7 @@ void TIM1_UP_IRQHandler(void)
 }
  8007c14:	bd08      	pop	{r3, pc}
  8007c16:	bf00      	nop
- 8007c18:	20000610 	.word	0x20000610
+ 8007c18:	20000614 	.word	0x20000614
 
 08007c1c <OTG_HS_IRQHandler>:
 
@@ -17957,7 +17963,7 @@ void OTG_HS_IRQHandler(void)
 }
  8007c24:	bd08      	pop	{r3, pc}
  8007c26:	bf00      	nop
- 8007c28:	2000192c 	.word	0x2000192c
+ 8007c28:	20001930 	.word	0x20001930
 
 08007c2c <_read>:
 	_kill(status, -1);
@@ -18067,7 +18073,7 @@ caddr_t _sbrk(int incr)
  8007c94:	f04f 30ff 	mov.w	r0, #4294967295
  8007c98:	e7f3      	b.n	8007c82 <_sbrk+0x1a>
  8007c9a:	bf00      	nop
- 8007c9c:	200005fc 	.word	0x200005fc
+ 8007c9c:	20000600 	.word	0x20000600
  8007ca0:	20001f48 	.word	0x20001f48
 
 08007ca4 <_close>:
@@ -18306,7 +18312,7 @@ void MX_USB_DEVICE_Init(void)
     Error_Handler();
  8007d78:	f7ff ffde 	bl	8007d38 <Error_Handler>
  8007d7c:	20000168 	.word	0x20000168
- 8007d80:	2000065c 	.word	0x2000065c
+ 8007d80:	20000660 	.word	0x20000660
  8007d84:	200000e0 	.word	0x200000e0
  8007d88:	20000120 	.word	0x20000120
 
@@ -18355,7 +18361,7 @@ static int8_t CDC_DeInit_HS(void)
  8007daa:	2000      	movs	r0, #0
  8007dac:	bd10      	pop	{r4, pc}
  8007dae:	bf00      	nop
- 8007db0:	2000065c 	.word	0x2000065c
+ 8007db0:	20000660 	.word	0x20000660
 
 08007db4 <CDC_Init_HS>:
 {
@@ -18374,9 +18380,9 @@ static int8_t CDC_DeInit_HS(void)
  8007dca:	2000      	movs	r0, #0
  8007dcc:	bd10      	pop	{r4, pc}
  8007dce:	bf00      	nop
- 8007dd0:	2000065c 	.word	0x2000065c
- 8007dd4:	2000112c 	.word	0x2000112c
- 8007dd8:	2000092c 	.word	0x2000092c
+ 8007dd0:	20000660 	.word	0x20000660
+ 8007dd4:	20001130 	.word	0x20001130
+ 8007dd8:	20000930 	.word	0x20000930
 
 08007ddc <CDC_Transmit_HS>:
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceHS.pClassData;
@@ -18403,7 +18409,7 @@ static int8_t CDC_DeInit_HS(void)
 }
  8007e00:	bd10      	pop	{r4, pc}
  8007e02:	bf00      	nop
- 8007e04:	2000065c 	.word	0x2000065c
+ 8007e04:	20000660 	.word	0x20000660
 
 08007e08 <HAL_PCD_MspInit>:
                        LL Driver Callbacks (PCD -> USB Device Library)
@@ -18784,7 +18790,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
     Error_Handler( );
  8007fde:	f7ff feab 	bl	8007d38 <Error_Handler>
  8007fe2:	e7e9      	b.n	8007fb8 <USBD_LL_Init+0x40>
- 8007fe4:	2000192c 	.word	0x2000192c
+ 8007fe4:	20001930 	.word	0x20001930
  8007fe8:	40040000 	.word	0x40040000
 
 08007fec <USBD_LL_IsStallEP>:
@@ -19100,7 +19106,7 @@ static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
  8008170:	4802      	ldr	r0, [pc, #8]	; (800817c <USBD_HS_ProductStrDescriptor+0x20>)
  8008172:	f7fe fe6a 	bl	8006e4a <USBD_GetString>
  8008176:	e7f8      	b.n	800816a <USBD_HS_ProductStrDescriptor+0xe>
- 8008178:	20001d34 	.word	0x20001d34
+ 8008178:	20001d38 	.word	0x20001d38
  800817c:	08009328 	.word	0x08009328
 
 08008180 <USBD_HS_ManufacturerStrDescriptor>:
@@ -19116,7 +19122,7 @@ static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
  800818e:	4620      	mov	r0, r4
  8008190:	bd10      	pop	{r4, pc}
  8008192:	bf00      	nop
- 8008194:	20001d34 	.word	0x20001d34
+ 8008194:	20001d38 	.word	0x20001d38
  8008198:	08009340 	.word	0x08009340
 
 0800819c <USBD_HS_ConfigStrDescriptor>:
@@ -19137,7 +19143,7 @@ static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
  80081b0:	4802      	ldr	r0, [pc, #8]	; (80081bc <USBD_HS_ConfigStrDescriptor+0x20>)
  80081b2:	f7fe fe4a 	bl	8006e4a <USBD_GetString>
  80081b6:	e7f8      	b.n	80081aa <USBD_HS_ConfigStrDescriptor+0xe>
- 80081b8:	20001d34 	.word	0x20001d34
+ 80081b8:	20001d38 	.word	0x20001d38
  80081bc:	08009354 	.word	0x08009354
 
 080081c0 <USBD_HS_InterfaceStrDescriptor>:
@@ -19158,7 +19164,7 @@ static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
  80081d4:	4802      	ldr	r0, [pc, #8]	; (80081e0 <USBD_HS_InterfaceStrDescriptor+0x20>)
  80081d6:	f7fe fe38 	bl	8006e4a <USBD_GetString>
  80081da:	e7f8      	b.n	80081ce <USBD_HS_InterfaceStrDescriptor+0xe>
- 80081dc:	20001d34 	.word	0x20001d34
+ 80081dc:	20001d38 	.word	0x20001d38
  80081e0:	08009360 	.word	0x08009360
 
 080081e4 <Reset_Handler>:
@@ -19246,7 +19252,7 @@ LoopFillZerobss:
   ldr  r2, =_sbss
  800822c:	200001e8 	.word	0x200001e8
   ldr  r3, = _ebss
- 8008230:	20001f44 	.word	0x20001f44
+ 8008230:	20001f48 	.word	0x20001f48
 
 08008234 <ADC3_IRQHandler>:
  * @retval None       
@@ -19408,7 +19414,7 @@ Infinite_Loop:
  800836e:	e7c7      	b.n	8008300 <_free_r+0x28>
  8008370:	b003      	add	sp, #12
  8008372:	bd30      	pop	{r4, r5, pc}
- 8008374:	20000604 	.word	0x20000604
+ 8008374:	20000608 	.word	0x20000608
 
 08008378 <_malloc_r>:
  8008378:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
@@ -19487,8 +19493,8 @@ Infinite_Loop:
  800841e:	d1dd      	bne.n	80083dc <_malloc_r+0x64>
  8008420:	e7cf      	b.n	80083c2 <_malloc_r+0x4a>
  8008422:	bf00      	nop
- 8008424:	20000604 	.word	0x20000604
- 8008428:	20000608 	.word	0x20000608
+ 8008424:	20000608 	.word	0x20000608
+ 8008428:	2000060c 	.word	0x2000060c
 
 0800842c <iprintf>:
  800842c:	b40f      	push	{r0, r1, r2, r3}
@@ -19546,7 +19552,7 @@ Infinite_Loop:
  800849e:	b103      	cbz	r3, 80084a2 <_sbrk_r+0x1a>
  80084a0:	6023      	str	r3, [r4, #0]
  80084a2:	bd38      	pop	{r3, r4, r5, pc}
- 80084a4:	20001f40 	.word	0x20001f40
+ 80084a4:	20001f44 	.word	0x20001f44
 
 080084a8 <std>:
  80084a8:	2300      	movs	r3, #0
@@ -19608,25 +19614,25 @@ Infinite_Loop:
  8008528:	4801      	ldr	r0, [pc, #4]	; (8008530 <__sfp_lock_acquire+0x8>)
  800852a:	f000 b8b3 	b.w	8008694 <__retarget_lock_acquire_recursive>
  800852e:	bf00      	nop
- 8008530:	20001f3c 	.word	0x20001f3c
+ 8008530:	20001f40 	.word	0x20001f40
 
 08008534 <__sfp_lock_release>:
  8008534:	4801      	ldr	r0, [pc, #4]	; (800853c <__sfp_lock_release+0x8>)
  8008536:	f000 b8ae 	b.w	8008696 <__retarget_lock_release_recursive>
  800853a:	bf00      	nop
- 800853c:	20001f3c 	.word	0x20001f3c
+ 800853c:	20001f40 	.word	0x20001f40
 
 08008540 <__sinit_lock_acquire>:
  8008540:	4801      	ldr	r0, [pc, #4]	; (8008548 <__sinit_lock_acquire+0x8>)
  8008542:	f000 b8a7 	b.w	8008694 <__retarget_lock_acquire_recursive>
  8008546:	bf00      	nop
- 8008548:	20001f37 	.word	0x20001f37
+ 8008548:	20001f3b 	.word	0x20001f3b
 
 0800854c <__sinit_lock_release>:
  800854c:	4801      	ldr	r0, [pc, #4]	; (8008554 <__sinit_lock_release+0x8>)
  800854e:	f000 b8a2 	b.w	8008696 <__retarget_lock_release_recursive>
  8008552:	bf00      	nop
- 8008554:	20001f37 	.word	0x20001f37
+ 8008554:	20001f3b 	.word	0x20001f3b
 
 08008558 <__sinit>:
  8008558:	b510      	push	{r4, lr}
@@ -19769,13 +19775,13 @@ Infinite_Loop:
  8008698:	4801      	ldr	r0, [pc, #4]	; (80086a0 <__malloc_lock+0x8>)
  800869a:	f7ff bffb 	b.w	8008694 <__retarget_lock_acquire_recursive>
  800869e:	bf00      	nop
- 80086a0:	20001f38 	.word	0x20001f38
+ 80086a0:	20001f3c 	.word	0x20001f3c
 
 080086a4 <__malloc_unlock>:
  80086a4:	4801      	ldr	r0, [pc, #4]	; (80086ac <__malloc_unlock+0x8>)
  80086a6:	f7ff bff6 	b.w	8008696 <__retarget_lock_release_recursive>
  80086aa:	bf00      	nop
- 80086ac:	20001f38 	.word	0x20001f38
+ 80086ac:	20001f3c 	.word	0x20001f3c
 
 080086b0 <__sfputc_r>:
  80086b0:	6893      	ldr	r3, [r2, #8]
@@ -20623,7 +20629,7 @@ Infinite_Loop:
  8008e62:	b103      	cbz	r3, 8008e66 <_write_r+0x1e>
  8008e64:	6023      	str	r3, [r4, #0]
  8008e66:	bd38      	pop	{r3, r4, r5, pc}
- 8008e68:	20001f40 	.word	0x20001f40
+ 8008e68:	20001f44 	.word	0x20001f44
 
 08008e6c <__swsetup_r>:
  8008e6c:	4b32      	ldr	r3, [pc, #200]	; (8008f38 <__swsetup_r+0xcc>)
@@ -20733,7 +20739,7 @@ Infinite_Loop:
  8008f5e:	b103      	cbz	r3, 8008f62 <_close_r+0x1a>
  8008f60:	6023      	str	r3, [r4, #0]
  8008f62:	bd38      	pop	{r3, r4, r5, pc}
- 8008f64:	20001f40 	.word	0x20001f40
+ 8008f64:	20001f44 	.word	0x20001f44
 
 08008f68 <__sflush_r>:
  8008f68:	898a      	ldrh	r2, [r1, #12]
@@ -20929,7 +20935,7 @@ Infinite_Loop:
  8009106:	b103      	cbz	r3, 800910a <_lseek_r+0x1e>
  8009108:	6023      	str	r3, [r4, #0]
  800910a:	bd38      	pop	{r3, r4, r5, pc}
- 800910c:	20001f40 	.word	0x20001f40
+ 800910c:	20001f44 	.word	0x20001f44
 
 08009110 <__swhatbuf_r>:
  8009110:	b570      	push	{r4, r5, r6, lr}
@@ -21034,7 +21040,7 @@ Infinite_Loop:
  80091f2:	b103      	cbz	r3, 80091f6 <_read_r+0x1e>
  80091f4:	6023      	str	r3, [r4, #0]
  80091f6:	bd38      	pop	{r3, r4, r5, pc}
- 80091f8:	20001f40 	.word	0x20001f40
+ 80091f8:	20001f44 	.word	0x20001f44
 
 080091fc <_fstat_r>:
  80091fc:	b538      	push	{r3, r4, r5, lr}
@@ -21052,7 +21058,7 @@ Infinite_Loop:
  8009216:	6023      	str	r3, [r4, #0]
  8009218:	bd38      	pop	{r3, r4, r5, pc}
  800921a:	bf00      	nop
- 800921c:	20001f40 	.word	0x20001f40
+ 800921c:	20001f44 	.word	0x20001f44
 
 08009220 <_isatty_r>:
  8009220:	b538      	push	{r3, r4, r5, lr}
@@ -21068,7 +21074,7 @@ Infinite_Loop:
  8009236:	b103      	cbz	r3, 800923a <_isatty_r+0x1a>
  8009238:	6023      	str	r3, [r4, #0]
  800923a:	bd38      	pop	{r3, r4, r5, pc}
- 800923c:	20001f40 	.word	0x20001f40
+ 800923c:	20001f44 	.word	0x20001f44
 
 08009240 <_init>:
  8009240:	b5f8      	push	{r3, r4, r5, r6, r7, lr}

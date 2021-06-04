@@ -69,6 +69,7 @@ extern TIM_HandleTypeDef        htim1;
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 BusAnalizer sBussAnalizer;
+AGpio sAGpio;
 /* USER CODE END 0 */
 
 

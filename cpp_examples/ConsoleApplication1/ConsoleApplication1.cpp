@@ -41,7 +41,7 @@ int main()
     Urs u1(Urs::Blana::alba, a1);
     Urs::Blana bl = Urs::Blana::alba;
     int conv = static_cast<int>(bl);
-    //int conv1 = bl;
+    int conv1 = bl;
     std::cout << ConvertGreutate(a1)<<"\n";
 }
 

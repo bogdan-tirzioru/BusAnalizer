@@ -1,42 +1,26 @@
+
 #ifndef AGPIO_H
 #define AGPIO_H
 
+// Includes
 #include "stm32h7xx_hal.h"
-class AGpio{
-	uint8 ui8Membru;
+
+// Classes
+#ifdef __cplusplus
+class AGpio
+{
+private:
+	// No private members so far
 public:
-	uint8 ui8Membru1;
-	AGpio()
-	{
-		//aici o sa fac ceva pe viitor
-	}
-	AGpio(AGpio &iAGpio)
-	{
+	// Constructor
+	AGpio(void);
 
-	}
-	AGpio(AGpio &&iAGpio)
-	{
+	// Write pin method
+	void WritePin(void);
 
-	}
-	AGpio(uint8 unparametru,uint16 doiparam=2)
-	{
-
-	}
-	AGpio():ui8Membru(0)
-	{
-
-	}
-	void Setup(AGpio *p)
-	{
-		p->ui8Membru = 10;
-	}
-	void Setup(AGpio &p) /*referinta*/
-	{
-		uint8 myvar=11;
-		uint8 *pvar=&myvar; /*adressa*/
-		uint8 myvar2= &(*pvar);
-		p.ui8Membru1 = 10;
-
-	}
+	// Destructor
+	~AGpio(void) {;};;
 };
-#endif
+#endif // __cplusplus
+
+#endif // AGPIO_H

@@ -39,7 +39,7 @@ Src/stm32h7xx_it.o: ../Src/stm32h7xx_it.c ../Inc/main.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h \
- ../Inc/stm32h7xx_it.h
+ ../Inc/AGpio.h ../Inc/stm32h7xx_it.h
 
 ../Inc/main.h:
 
@@ -122,5 +122,7 @@ Src/stm32h7xx_it.o: ../Src/stm32h7xx_it.c ../Inc/main.h \
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h:
 
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h:
+
+../Inc/AGpio.h:
 
 ../Inc/stm32h7xx_it.h:

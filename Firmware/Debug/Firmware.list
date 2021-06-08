@@ -23,25 +23,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
   9 .ARM.attributes 0000002e  00000000  00000000  000201e8  2**0
                   CONTENTS, READONLY
- 10 .debug_info   00049851  00000000  00000000  00020216  2**0
+ 10 .debug_info   00049a34  00000000  00000000  00020216  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 11 .debug_abbrev 000067c4  00000000  00000000  00069a67  2**0
+ 11 .debug_abbrev 0000681e  00000000  00000000  00069c4a  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 12 .debug_loc    0001efdf  00000000  00000000  0007022b  2**0
+ 12 .debug_loc    0001efdf  00000000  00000000  00070468  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_aranges 00002010  00000000  00000000  0008f210  2**3
+ 13 .debug_aranges 00002020  00000000  00000000  0008f448  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_ranges 00001ef0  00000000  00000000  00091220  2**3
+ 14 .debug_ranges 00001f00  00000000  00000000  00091468  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_macro  00041bf4  00000000  00000000  00093110  2**0
+ 15 .debug_macro  00041bf4  00000000  00000000  00093368  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_line   00031c86  00000000  00000000  000d4d04  2**0
+ 16 .debug_line   00031cd9  00000000  00000000  000d4f5c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_str    00180bd0  00000000  00000000  0010698a  2**0
+ 17 .debug_str    00180c30  00000000  00000000  00106c35  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .comment      00000053  00000000  00000000  0028755a  2**0
+ 18 .comment      00000053  00000000  00000000  00287865  2**0
                   CONTENTS, READONLY
- 19 .debug_frame  00005f58  00000000  00000000  002875b0  2**2
+ 19 .debug_frame  00005f78  00000000  00000000  002878b8  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -17232,7 +17232,7 @@ public:
  800783e:	bf00      	nop
  8007840:	20000518 	.word	0x20000518
 
-08007844 <_GLOBAL__sub_I_hfdcan1>:
+08007844 <_GLOBAL__sub_I__ZN5AGpio4InitEP12GPIO_TypeDefP17AGPIO_InitTypeDef>:
 }
  8007844:	b508      	push	{r3, lr}
  8007846:	f64f 71ff 	movw	r1, #65535	; 0xffff
@@ -17240,7 +17240,7 @@ public:
  800784c:	f7ff ff8a 	bl	8007764 <_Z41__static_initialization_and_destruction_0ii>
  8007850:	bd08      	pop	{r3, pc}
 
-08007852 <_GLOBAL__sub_D_hfdcan1>:
+08007852 <_GLOBAL__sub_D__ZN5AGpio4InitEP12GPIO_TypeDefP17AGPIO_InitTypeDef>:
  8007852:	b508      	push	{r3, lr}
  8007854:	f64f 71ff 	movw	r1, #65535	; 0xffff
  8007858:	2000      	movs	r0, #0

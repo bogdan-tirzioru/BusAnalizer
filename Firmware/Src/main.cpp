@@ -97,7 +97,31 @@ BusAnalizer::BusAnalizer(void)
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
+	if(1)
+	{
+		this->BusGPIO.GPIOInit();
+	}
+	else
+	{
+		  GPIOPinInitStruct PinInitStruct={0};
+
+		  PinInitStruct.Pin = FD1_STBM_Pin|FD2_STBM_Pin;
+		  PinInitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+		  PinInitStruct.Pull = GPIO_NOPULL;
+		  PinInitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+		  this->BusGPIO.GPIOInit(GPIOA, &PinInitStruct);
+
+		  PinInitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+		  PinInitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+		  PinInitStruct.Pull = GPIO_NOPULL;
+		  PinInitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+		  this->BusGPIO.GPIOInit(GPIOB, &PinInitStruct);
+	}
+
+
+	//MX_GPIO_Init();
 	MX_FDCAN1_Init();
 	MX_FDCAN2_Init();
 	MX_I2C1_Init();

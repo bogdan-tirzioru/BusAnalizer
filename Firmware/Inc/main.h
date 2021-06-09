@@ -29,7 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal.h"
-
+#include "GPIOClass.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -65,6 +65,7 @@ private:
 	bool ui8SetRequestToUsbCAN1 =false;
 	uint32_t ui32DeltameasureTransmit=0;
 	uint32_t ui32DeltameasureTransmitMax =0;
+	GPIOClass BusGPIO;
 public:
   BusAnalizer(void);
   void Run(void);

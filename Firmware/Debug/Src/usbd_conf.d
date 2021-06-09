@@ -40,7 +40,7 @@ Src/usbd_conf.o: ../Src/usbd_conf.c \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
- ../Inc/usbd_conf.h ../Inc/main.h \
+ ../Inc/usbd_conf.h ../Inc/main.h ../Inc/GPIO.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
@@ -132,6 +132,8 @@ Src/usbd_conf.o: ../Src/usbd_conf.c \
 ../Inc/usbd_conf.h:
 
 ../Inc/main.h:
+
+../Inc/GPIO.h:
 
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h:
 

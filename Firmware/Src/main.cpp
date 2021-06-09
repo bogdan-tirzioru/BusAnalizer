@@ -658,33 +658,33 @@ void BusAnalizer::MX_USART1_UART_Init(void)
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
-  */
+
 
 
 void BusAnalizer::MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* GPIO Ports Clock Enable */
+  // GPIO Ports Clock Enable
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
+  //Configure GPIO pin Output Level
   HAL_GPIO_WritePin(GPIOA, FD1_STBM_Pin|FD2_STBM_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
+  //Configure GPIO pin Output Level
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : FD1_STBM_Pin FD2_STBM_Pin */
+  //Configure GPIO pins : FD1_STBM_Pin FD2_STBM_Pin
   GPIO_InitStruct.Pin = FD1_STBM_Pin|FD2_STBM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 */
+  //Configure GPIO pins : PB0 PB1
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -693,7 +693,7 @@ void BusAnalizer::MX_GPIO_Init(void)
 
 }
 
-
+*/
 
 /**
   * @brief  This function is executed in case of error occurrence.

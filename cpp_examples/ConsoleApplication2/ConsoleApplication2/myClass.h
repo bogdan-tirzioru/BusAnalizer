@@ -2,12 +2,14 @@
 class myClass
 {
 	int i = 5;
-	static int ii ;
+	static int ii;
 public:
 	myClass();
 	static void my_function(int l_i = 3)
 	{
-		ii = l_i;
+		ii = l_i; 
+		//i++;
+		//ii = ii + i;
 	};
 	void my_second_function(int l_i = 4)
 	{

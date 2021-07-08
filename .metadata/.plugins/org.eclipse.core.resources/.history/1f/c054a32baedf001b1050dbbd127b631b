@@ -22,6 +22,7 @@
 #include "main.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -105,7 +106,13 @@ BusAnalizer::BusAnalizer(void)
 	MX_RTC_Init();
 	MX_SPI1_Init();
 	MX_USART1_UART_Init();
-	MX_TIM2_Init();
+	//MX_TIM2_Init();
+	timerinit structinitTim2 = {TIM2, 29, TIM_COUNTERMODE_UP, 0xFFFFFFFF,
+			                    TIM_CLOCKDIVISION_DIV1, TIM_AUTORELOAD_PRELOAD_DISABLE,
+								TIM_CLOCKSOURCE_INTERNAL, TIM_TRGO_RESET, TIM_MASTERSLAVEMODE_DISABLE,
+								TIM_OCMODE_TIMING, 0, TIM_OCPOLARITY_HIGH, TIM_OCFAST_DISABLE, TIM_CHANNEL_1};
+	Timer Timer2;
+	Timer2.TimerInit(&htim2, structinitTim2);
 	/* USER CODE BEGIN 2 */
 	/* init code for USB_DEVICE */
 	MX_USB_DEVICE_Init();
@@ -573,11 +580,14 @@ void BusAnalizer::MX_TIM2_Init(void)
   htim2.Init.Period = 0xFFFFFFFF;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
+
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+
   if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
@@ -586,20 +596,27 @@ void BusAnalizer::MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+
+
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+
+
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+
   sConfigOC.OCMode = TIM_OCMODE_TIMING;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+
   if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
+
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
@@ -658,33 +675,33 @@ void BusAnalizer::MX_USART1_UART_Init(void)
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
-  */
+
 
 
 void BusAnalizer::MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* GPIO Ports Clock Enable */
+  // GPIO Ports Clock Enable
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
+  //Configure GPIO pin Output Level
   HAL_GPIO_WritePin(GPIOA, FD1_STBM_Pin|FD2_STBM_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
+  //Configure GPIO pin Output Level
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : FD1_STBM_Pin FD2_STBM_Pin */
+  //Configure GPIO pins : FD1_STBM_Pin FD2_STBM_Pin
   GPIO_InitStruct.Pin = FD1_STBM_Pin|FD2_STBM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 */
+  //Configure GPIO pins : PB0 PB1
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -693,7 +710,7 @@ void BusAnalizer::MX_GPIO_Init(void)
 
 }
 
-
+*/
 
 /**
   * @brief  This function is executed in case of error occurrence.

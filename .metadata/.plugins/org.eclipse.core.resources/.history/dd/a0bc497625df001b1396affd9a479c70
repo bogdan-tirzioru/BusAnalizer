@@ -1,0 +1,371 @@
+
+
+#include "Timer.h"
+
+
+
+void Timer::TimerInit(TIM_HandleTypeDef *Handle, timerinit structinit)
+{
+	Handle ->Instance = structinit.Instance;
+	Handle ->Init.Prescaler = structinit.Prescaler;
+	Handle ->Init.CounterMode = structinit.CounterMode;
+	Handle ->Init.Period = structinit.Period;
+	Handle ->Init.ClockDivision = structinit.ClockDivision;
+	Handle ->Init.AutoReloadPreload = structinit.AutoReloadPreload;
+
+	this->TIM_Base_Init(&Handle);
+
+	if (TIM_Base_Init(&Handle) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	this->sClockSourceConfig.ClockSource = structinit.ClockSource;
+
+
+	if (this->TIM_ConfigClockSource(&Handle, &this->sClockSourceConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	 if (this->TIM_OC_Init(&Handle) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	this-> sMasterConfig.MasterOutputTrigger = structinit.MasterOutputTrigger;
+	this-> sMasterConfig.MasterSlaveMode = structinit.MasterSlaveMode;
+
+	 if (this->TIMEx_MasterConfigSynchronization(&Handle, &this->sMasterConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	 this->sConfigOC.OCMode = structinit.OCMode;
+	 this->sConfigOC.Pulse = structinit.Pulse;
+	 this->sConfigOC.OCPolarity = structinit.OCPolarity;
+	 this->sConfigOC.OCFastMode = structinit.OCFastMode;
+
+	  if (this->TIM_OC_ConfigChannel(&Handle, &this->sConfigOC, structinit.TIM_CHANNEL) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+}
+
+
+HAL_StatusTypeDef Timer::TIM_Base_Init(TIM_HandleTypeDef *htim)
+{
+  /* Check the TIM handle allocation */
+  if (htim == NULL)
+  {
+    return HAL_ERROR;
+  }
+
+  /* Check the parameters */
+  assert_param(IS_TIM_INSTANCE(htim->Instance));
+  assert_param(IS_TIM_COUNTER_MODE(htim->Init.CounterMode));
+  assert_param(IS_TIM_CLOCKDIVISION_DIV(htim->Init.ClockDivision));
+  assert_param(IS_TIM_AUTORELOAD_PRELOAD(htim->Init.AutoReloadPreload));
+
+  if (htim->State == HAL_TIM_STATE_RESET)
+  {
+    /* Allocate lock resource and initialize it */
+    htim->Lock = HAL_UNLOCKED;
+
+#if (USE_HAL_TIM_REGISTER_CALLBACKS == 1)
+    /* Reset interrupt callbacks to legacy weak callbacks */
+    TIM_ResetCallback(htim);
+
+    if (htim->Base_MspInitCallback == NULL)
+    {
+      htim->Base_MspInitCallback = HAL_TIM_Base_MspInit;
+    }
+    /* Init the low level hardware : GPIO, CLOCK, NVIC */
+    htim->Base_MspInitCallback(htim);
+#else
+    /* Init the low level hardware : GPIO, CLOCK, NVIC */
+    HAL_TIM_Base_MspInit(htim);
+#endif /* USE_HAL_TIM_REGISTER_CALLBACKS */
+  }
+
+  /* Set the TIM state */
+  htim->State = HAL_TIM_STATE_BUSY;
+
+  /* Set the Time Base configuration */
+  TIM_Base_SetConfig(htim->Instance, &htim->Init);
+
+  /* Initialize the DMA burst operation state */
+  htim->DMABurstState = HAL_DMA_BURST_STATE_READY;
+
+  /* Initialize the TIM channels state */
+  TIM_CHANNEL_STATE_SET_ALL(htim, HAL_TIM_CHANNEL_STATE_READY);
+  TIM_CHANNEL_N_STATE_SET_ALL(htim, HAL_TIM_CHANNEL_STATE_READY);
+
+  /* Initialize the TIM state*/
+  htim->State = HAL_TIM_STATE_READY;
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef Timer::TIM_ConfigClockSource(TIM_HandleTypeDef *htim, TIM_ClockConfigTypeDef *sClockSourceConfig)
+{
+  uint32_t tmpsmcr;
+
+  /* Process Locked */
+  __HAL_LOCK(htim);
+
+  htim->State = HAL_TIM_STATE_BUSY;
+
+  /* Check the parameters */
+  assert_param(IS_TIM_CLOCKSOURCE(sClockSourceConfig->ClockSource));
+
+  /* Reset the SMS, TS, ECE, ETPS and ETRF bits */
+  tmpsmcr = htim->Instance->SMCR;
+  tmpsmcr &= ~(TIM_SMCR_SMS | TIM_SMCR_TS);
+  tmpsmcr &= ~(TIM_SMCR_ETF | TIM_SMCR_ETPS | TIM_SMCR_ECE | TIM_SMCR_ETP);
+  htim->Instance->SMCR = tmpsmcr;
+
+  switch (sClockSourceConfig->ClockSource)
+  {
+    case TIM_CLOCKSOURCE_INTERNAL:
+    {
+      assert_param(IS_TIM_INSTANCE(htim->Instance));
+      break;
+    }
+
+    case TIM_CLOCKSOURCE_ETRMODE1:
+    {
+      /* Check whether or not the timer instance supports external trigger input mode 1 (ETRF)*/
+      assert_param(IS_TIM_CLOCKSOURCE_ETRMODE1_INSTANCE(htim->Instance));
+
+      /* Check ETR input conditioning related parameters */
+      assert_param(IS_TIM_CLOCKPRESCALER(sClockSourceConfig->ClockPrescaler));
+      assert_param(IS_TIM_CLOCKPOLARITY(sClockSourceConfig->ClockPolarity));
+      assert_param(IS_TIM_CLOCKFILTER(sClockSourceConfig->ClockFilter));
+
+      /* Configure the ETR Clock source */
+      TIM_ETR_SetConfig(htim->Instance,
+                        sClockSourceConfig->ClockPrescaler,
+                        sClockSourceConfig->ClockPolarity,
+                        sClockSourceConfig->ClockFilter);
+
+      /* Select the External clock mode1 and the ETRF trigger */
+      tmpsmcr = htim->Instance->SMCR;
+      tmpsmcr |= (TIM_SLAVEMODE_EXTERNAL1 | TIM_CLOCKSOURCE_ETRMODE1);
+      /* Write to TIMx SMCR */
+      htim->Instance->SMCR = tmpsmcr;
+      break;
+    }
+
+    case TIM_CLOCKSOURCE_ETRMODE2:
+    {
+      /* Check whether or not the timer instance supports external trigger input mode 2 (ETRF)*/
+      assert_param(IS_TIM_CLOCKSOURCE_ETRMODE2_INSTANCE(htim->Instance));
+
+      /* Check ETR input conditioning related parameters */
+      assert_param(IS_TIM_CLOCKPRESCALER(sClockSourceConfig->ClockPrescaler));
+      assert_param(IS_TIM_CLOCKPOLARITY(sClockSourceConfig->ClockPolarity));
+      assert_param(IS_TIM_CLOCKFILTER(sClockSourceConfig->ClockFilter));
+
+      /* Configure the ETR Clock source */
+      TIM_ETR_SetConfig(htim->Instance,
+                        sClockSourceConfig->ClockPrescaler,
+                        sClockSourceConfig->ClockPolarity,
+                        sClockSourceConfig->ClockFilter);
+      /* Enable the External clock mode2 */
+      htim->Instance->SMCR |= TIM_SMCR_ECE;
+      break;
+    }
+
+    case TIM_CLOCKSOURCE_TI1:
+    {
+      /* Check whether or not the timer instance supports external clock mode 1 */
+      assert_param(IS_TIM_CLOCKSOURCE_TIX_INSTANCE(htim->Instance));
+
+      /* Check TI1 input conditioning related parameters */
+      assert_param(IS_TIM_CLOCKPOLARITY(sClockSourceConfig->ClockPolarity));
+      assert_param(IS_TIM_CLOCKFILTER(sClockSourceConfig->ClockFilter));
+
+      TIM_TI1_ConfigInputStage(htim->Instance,
+                               sClockSourceConfig->ClockPolarity,
+                               sClockSourceConfig->ClockFilter);
+      TIM_ITRx_SetConfig(htim->Instance, TIM_CLOCKSOURCE_TI1);
+      break;
+    }
+
+    case TIM_CLOCKSOURCE_TI2:
+    {
+      /* Check whether or not the timer instance supports external clock mode 1 (ETRF)*/
+      assert_param(IS_TIM_CLOCKSOURCE_TIX_INSTANCE(htim->Instance));
+
+      /* Check TI2 input conditioning related parameters */
+      assert_param(IS_TIM_CLOCKPOLARITY(sClockSourceConfig->ClockPolarity));
+      assert_param(IS_TIM_CLOCKFILTER(sClockSourceConfig->ClockFilter));
+
+      TIM_TI2_ConfigInputStage(htim->Instance,
+                               sClockSourceConfig->ClockPolarity,
+                               sClockSourceConfig->ClockFilter);
+      TIM_ITRx_SetConfig(htim->Instance, TIM_CLOCKSOURCE_TI2);
+      break;
+    }
+
+    case TIM_CLOCKSOURCE_TI1ED:
+    {
+      /* Check whether or not the timer instance supports external clock mode 1 */
+      assert_param(IS_TIM_CLOCKSOURCE_TIX_INSTANCE(htim->Instance));
+
+      /* Check TI1 input conditioning related parameters */
+      assert_param(IS_TIM_CLOCKPOLARITY(sClockSourceConfig->ClockPolarity));
+      assert_param(IS_TIM_CLOCKFILTER(sClockSourceConfig->ClockFilter));
+
+      TIM_TI1_ConfigInputStage(htim->Instance,
+                               sClockSourceConfig->ClockPolarity,
+                               sClockSourceConfig->ClockFilter);
+      TIM_ITRx_SetConfig(htim->Instance, TIM_CLOCKSOURCE_TI1ED);
+      break;
+    }
+
+    case TIM_CLOCKSOURCE_ITR0:
+    case TIM_CLOCKSOURCE_ITR1:
+    case TIM_CLOCKSOURCE_ITR2:
+    case TIM_CLOCKSOURCE_ITR3:
+    case TIM_CLOCKSOURCE_ITR4:
+    case TIM_CLOCKSOURCE_ITR5:
+    case TIM_CLOCKSOURCE_ITR6:
+    case TIM_CLOCKSOURCE_ITR7:
+    case TIM_CLOCKSOURCE_ITR8:
+    {
+      /* Check whether or not the timer instance supports internal trigger input */
+      assert_param(IS_TIM_CLOCKSOURCE_ITRX_INSTANCE(htim->Instance));
+
+      TIM_ITRx_SetConfig(htim->Instance, sClockSourceConfig->ClockSource);
+      break;
+    }
+
+    default:
+      break;
+  }
+  htim->State = HAL_TIM_STATE_READY;
+
+  __HAL_UNLOCK(htim);
+
+  return HAL_OK;
+}
+
+
+HAL_StatusTypeDef Timer::TIM_OC_Init(TIM_HandleTypeDef *htim)
+{
+  /* Check the TIM handle allocation */
+  if (htim == NULL)
+  {
+    return HAL_ERROR;
+  }
+
+  /* Check the parameters */
+  assert_param(IS_TIM_INSTANCE(htim->Instance));
+  assert_param(IS_TIM_COUNTER_MODE(htim->Init.CounterMode));
+  assert_param(IS_TIM_CLOCKDIVISION_DIV(htim->Init.ClockDivision));
+  assert_param(IS_TIM_AUTORELOAD_PRELOAD(htim->Init.AutoReloadPreload));
+
+  if (htim->State == HAL_TIM_STATE_RESET)
+  {
+    /* Allocate lock resource and initialize it */
+    htim->Lock = HAL_UNLOCKED;
+
+#if (USE_HAL_TIM_REGISTER_CALLBACKS == 1)
+    /* Reset interrupt callbacks to legacy weak callbacks */
+    TIM_ResetCallback(htim);
+
+    if (htim->OC_MspInitCallback == NULL)
+    {
+      htim->OC_MspInitCallback = HAL_TIM_OC_MspInit;
+    }
+    /* Init the low level hardware : GPIO, CLOCK, NVIC */
+    htim->OC_MspInitCallback(htim);
+#else
+    /* Init the low level hardware : GPIO, CLOCK, NVIC and DMA */
+    HAL_TIM_OC_MspInit(htim);
+#endif /* USE_HAL_TIM_REGISTER_CALLBACKS */
+  }
+
+  /* Set the TIM state */
+  htim->State = HAL_TIM_STATE_BUSY;
+
+  /* Init the base time for the Output Compare */
+  TIM_Base_SetConfig(htim->Instance,  &htim->Init);
+
+  /* Initialize the DMA burst operation state */
+  htim->DMABurstState = HAL_DMA_BURST_STATE_READY;
+
+  /* Initialize the TIM channels state */
+  TIM_CHANNEL_STATE_SET_ALL(htim, HAL_TIM_CHANNEL_STATE_READY);
+  TIM_CHANNEL_N_STATE_SET_ALL(htim, HAL_TIM_CHANNEL_STATE_READY);
+
+  /* Initialize the TIM state*/
+  htim->State = HAL_TIM_STATE_READY;
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef Timer::TIMEx_MasterConfigSynchronization(TIM_HandleTypeDef *htim,
+                                                        TIM_MasterConfigTypeDef *sMasterConfig)
+{
+  uint32_t tmpcr2;
+  uint32_t tmpsmcr;
+
+  /* Check the parameters */
+  assert_param(IS_TIM_MASTER_INSTANCE(htim->Instance));
+  assert_param(IS_TIM_TRGO_SOURCE(sMasterConfig->MasterOutputTrigger));
+  assert_param(IS_TIM_MSM_STATE(sMasterConfig->MasterSlaveMode));
+
+  /* Check input state */
+  __HAL_LOCK(htim);
+
+  /* Change the handler state */
+  htim->State = HAL_TIM_STATE_BUSY;
+
+  /* Get the TIMx CR2 register value */
+  tmpcr2 = htim->Instance->CR2;
+
+  /* Get the TIMx SMCR register value */
+  tmpsmcr = htim->Instance->SMCR;
+
+  /* If the timer supports ADC synchronization through TRGO2, set the master mode selection 2 */
+  if (IS_TIM_TRGO2_INSTANCE(htim->Instance))
+  {
+    /* Check the parameters */
+    assert_param(IS_TIM_TRGO2_SOURCE(sMasterConfig->MasterOutputTrigger2));
+
+    /* Clear the MMS2 bits */
+    tmpcr2 &= ~TIM_CR2_MMS2;
+    /* Select the TRGO2 source*/
+    tmpcr2 |= sMasterConfig->MasterOutputTrigger2;
+  }
+
+  /* Reset the MMS Bits */
+  tmpcr2 &= ~TIM_CR2_MMS;
+  /* Select the TRGO source */
+  tmpcr2 |=  sMasterConfig->MasterOutputTrigger;
+
+  /* Update TIMx CR2 */
+  htim->Instance->CR2 = tmpcr2;
+
+  if (IS_TIM_SLAVE_INSTANCE(htim->Instance))
+  {
+    /* Reset the MSM Bit */
+    tmpsmcr &= ~TIM_SMCR_MSM;
+    /* Set master mode */
+    tmpsmcr |= sMasterConfig->MasterSlaveMode;
+
+    /* Update TIMx SMCR */
+    htim->Instance->SMCR = tmpsmcr;
+  }
+
+  /* Change the htim state */
+  htim->State = HAL_TIM_STATE_READY;
+
+  __HAL_UNLOCK(htim);
+
+  return HAL_OK;
+}

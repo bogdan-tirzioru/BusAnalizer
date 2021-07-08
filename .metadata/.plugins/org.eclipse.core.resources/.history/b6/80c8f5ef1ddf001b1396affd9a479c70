@@ -1,0 +1,18 @@
+
+
+#include "Timer.h"
+
+
+
+void Timer::TimerInit(TIM_HandleTypeDef *Handle, timerinit structinit)
+{
+	Handle ->Instance = structinit.Instance;
+	Handle ->Init.Prescaler = structinit.Prescaler;
+	Handle ->Init.CounterMode = structinit.CounterMode;
+	Handle ->Init.Period = structinit.Period;
+	Handle ->Init.ClockDivision = structinit.ClockDivision;
+	Handle ->Init.AutoReloadPreload = structinit.AutoReloadPreload;
+	this->TIM_Base_Init(&Handle);
+
+}
+

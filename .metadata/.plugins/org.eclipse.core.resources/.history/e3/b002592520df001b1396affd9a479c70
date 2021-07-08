@@ -1,0 +1,26 @@
+
+
+#include "stm32h7xx_hal.h"
+
+struct timerinit
+{
+	TIM_TypeDef *Instance;
+	uint32_t Prescaler;
+	uint32_t CounterMode;
+	uint32_t Period;
+	uint32_t ClockDivision;
+	uint32_t AutoReloadPreload;
+};
+
+
+class Timer
+{
+public:
+
+	Timer () {};
+
+	void TimerInit(TIM_HandleTypeDef Handle, timerinit structinit);
+	HAL_StatusTypeDef TIM_Base_Init(TIM_HandleTypeDef *htim);
+
+
+};

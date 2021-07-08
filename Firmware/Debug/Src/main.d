@@ -47,7 +47,9 @@ Src/main.o: ../Src/main.cpp ../Inc/main.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
- ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
+ ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
+ ../Drivers/STM32H7xx_HAL_Driver/Inc/Timer.h \
+ ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h
 
 ../Inc/main.h:
 
@@ -154,3 +156,7 @@ Src/main.o: ../Src/main.cpp ../Inc/main.h \
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
 
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
+
+../Drivers/STM32H7xx_HAL_Driver/Inc/Timer.h:
+
+../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h:

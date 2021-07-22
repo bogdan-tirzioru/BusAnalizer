@@ -118,6 +118,7 @@ BusAnalizer::BusAnalizer(void)
 	ui32CounterTransmisionErrorCAN1 =0;
 	HAL_TIM_Base_Start(&htim2);
 /* USER CODE END 2 */
+	auto x =[](int a, int b){return (a+b)/2;};
 
 }
 

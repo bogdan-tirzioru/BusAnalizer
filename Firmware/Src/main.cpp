@@ -46,6 +46,9 @@
 FDCAN_HandleTypeDef hfdcan1;
 FDCAN_HandleTypeDef hfdcan2;
 
+AFdCan sAFdCan1;
+AFdCan sAFdCan2;
+
 I2C_HandleTypeDef hi2c1;
 
 RTC_HandleTypeDef hrtc;
@@ -302,10 +305,12 @@ void BusAnalizer::MX_FDCAN1_Init(void)
   hfdcan1.Init.TxFifoQueueElmtsNbr = 32;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
-  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+
+  if (sAFdCan1.Init(&hfdcan1) != HAL_OK)
   {
-    Error_Handler();
+	Error_Handler();
   }
+
   /* USER CODE BEGIN FDCAN1_Init 2 */
   /* Configure Rx filter */
     sFilterConfig.IdType = FDCAN_STANDARD_ID;
@@ -382,10 +387,12 @@ void BusAnalizer::MX_FDCAN2_Init(void)
   hfdcan2.Init.TxFifoQueueElmtsNbr = 10;
   hfdcan2.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   hfdcan2.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
-  if (HAL_FDCAN_Init(&hfdcan2) != HAL_OK)
+
+  if (sAFdCan2.Init(&hfdcan2) != HAL_OK)
   {
-    Error_Handler();
+	Error_Handler();
   }
+
   /* USER CODE BEGIN FDCAN2_Init 2 */
 
   /* USER CODE END FDCAN2_Init 2 */
@@ -670,10 +677,12 @@ void BusAnalizer::MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, FD1_STBM_Pin|FD2_STBM_Pin, GPIO_PIN_RESET);
+  // HAL_GPIO_WritePin(GPIOA, FD1_STBM_Pin|FD2_STBM_Pin, GPIO_PIN_RESET);
+  sAGpio.WritePin(GPIOA, FD1_STBM_Pin|FD2_STBM_Pin, AGPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
+  // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
+  sAGpio.WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, AGPIO_PIN_RESET);
 
   /*Configure GPIO pins : FD1_STBM_Pin FD2_STBM_Pin */
   GPIO_InitStruct.Pin = FD1_STBM_Pin|FD2_STBM_Pin;

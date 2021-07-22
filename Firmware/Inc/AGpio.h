@@ -19,6 +19,8 @@ extern "C" {
 #define FALLING_EDGE          (0x00200000U)
 #define GPIO_OUTPUT_TYPE      (0x00000010U)
 
+#define GPIO_NUMBER           (16U)
+
 // Type definitions
 typedef struct
 {
@@ -28,6 +30,13 @@ typedef struct
   uint32_t Speed;
   uint32_t Alternate;
 } AGPIO_InitTypeDef;
+
+// Enumerations
+typedef enum
+{
+  AGPIO_PIN_RESET = 0U,
+  AGPIO_PIN_SET
+} AGPIO_PinState;
 
 // Classes
 #ifdef __cplusplus
@@ -43,7 +52,7 @@ public:
 	void Init(GPIO_TypeDef *GPIOx, AGPIO_InitTypeDef *GPIO_Init);
 
 	// Write pin method
-	void WritePin(void);
+	void WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, AGPIO_PinState PinState);
 
 	// Destructor
 	~AGpio(void) {;};
@@ -175,9 +184,20 @@ void AGpio::Init(GPIO_TypeDef *GPIOx, AGPIO_InitTypeDef *GPIO_Init)
 	}
 }
 
-void AGpio::WritePin()
+void AGpio::WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, AGPIO_PinState PinState)
 {
-	// add content here
+  /* Check the parameters */
+  assert_param(IS_GPIO_PIN(GPIO_Pin));
+  assert_param(IS_GPIO_PIN_ACTION(PinState));
+
+  if (PinState != AGPIO_PIN_RESET)
+  {
+    GPIOx->BSRR = GPIO_Pin;
+  }
+  else
+  {
+    GPIOx->BSRR = (uint32_t)GPIO_Pin << GPIO_NUMBER;
+  }
 }
 #endif // __cplusplus
 

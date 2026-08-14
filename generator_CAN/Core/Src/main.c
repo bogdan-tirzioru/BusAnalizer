@@ -228,19 +228,68 @@ int main(void)
 	  {
 	      last_report_tick = now;
 
-	      char msg[96];
+	      char msg1[96];
 
-	      int len = snprintf(msg,
-	                         sizeof(msg),
+	      int len1 = snprintf(msg1,
+	                         sizeof(msg1),
 	                         "TX=%lu RX=%lu TXERR=%lu\r\n",
 	                         (unsigned long)can_tx_count,
 	                         (unsigned long)can_rx_count,
 	                         (unsigned long)can_tx_error);
 
 	      HAL_UART_Transmit(&huart1,
-	                        (uint8_t *)msg,
-	                        len,
+	                        (uint8_t *)msg1,
+	                        len1,
 	                        HAL_MAX_DELAY);
+	      FDCAN_ProtocolStatusTypeDef ps1 = {0};
+	      FDCAN_ProtocolStatusTypeDef ps2 = {0};
+
+	      FDCAN_ErrorCountersTypeDef ec1 = {0};
+	      FDCAN_ErrorCountersTypeDef ec2 = {0};
+
+	      HAL_FDCAN_GetProtocolStatus(&hfdcan1, &ps1);
+	      HAL_FDCAN_GetProtocolStatus(&hfdcan2, &ps2);
+
+	      HAL_FDCAN_GetErrorCounters(&hfdcan1, &ec1);
+	      HAL_FDCAN_GetErrorCounters(&hfdcan2, &ec2);
+
+	      uint32_t txFree =
+	          HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1);
+
+	      uint32_t rxFill =
+	          HAL_FDCAN_GetRxFifoFillLevel(&hfdcan2, FDCAN_RX_FIFO0);
+
+	      char msg[256];
+
+	      int len = snprintf(
+	          msg,
+	          sizeof(msg),
+	          "TXQ=%lu RX=%lu ADDERR=%lu free=%lu rxFill=%lu "
+	          "| C1 TEC=%lu REC=%lu EP=%lu BO=%lu LEC=%lu "
+	          "| C2 TEC=%lu REC=%lu EP=%lu BO=%lu LEC=%lu\r\n",
+	          (unsigned long)can_tx_count,
+	          (unsigned long)can_rx_count,
+	          (unsigned long)can_tx_error,
+	          (unsigned long)txFree,
+	          (unsigned long)rxFill,
+
+	          (unsigned long)ec1.TxErrorCnt,
+	          (unsigned long)ec1.RxErrorCnt,
+	          (unsigned long)ps1.ErrorPassive,
+	          (unsigned long)ps1.BusOff,
+	          (unsigned long)ps1.LastErrorCode,
+
+	          (unsigned long)ec2.TxErrorCnt,
+	          (unsigned long)ec2.RxErrorCnt,
+	          (unsigned long)ps2.ErrorPassive,
+	          (unsigned long)ps2.BusOff,
+	          (unsigned long)ps2.LastErrorCode);
+
+	      HAL_UART_Transmit(
+	          &huart1,
+	          (uint8_t *)msg,
+	          len,
+	          HAL_MAX_DELAY);
 	  }
   }
   /* USER CODE END 3 */

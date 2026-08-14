@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +47,12 @@ FDCAN_HandleTypeDef hfdcan2;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+static uint32_t can_tx_count = 0;
+static uint32_t can_rx_count = 0;
+static uint32_t can_tx_error = 0;
 
+static uint32_t last_tx_tick = 0;
+static uint32_t last_report_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,6 +111,63 @@ int main(void)
   MX_FDCAN2_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  const char msg[] =
+      "\r\n"
+      "================================\r\n"
+      " CAN traffic generator\r\n"
+      "================================\r\n"
+      "Boot OK\r\n"
+      "CPU      : 400 MHz\r\n"
+      "CAN rate : 500 kbit/s\r\n"
+      "\r\n";
+
+  HAL_UART_Transmit(&huart1,
+                    (uint8_t *)msg,
+                    sizeof(msg) - 1,
+                    HAL_MAX_DELAY);
+
+  FDCAN_TxHeaderTypeDef txHeader = {0};
+
+  /* CAN2 accepts all non-matching standard/extended frames into FIFO0 */
+  if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan2,
+                                   FDCAN_ACCEPT_IN_RX_FIFO0,
+                                   FDCAN_ACCEPT_IN_RX_FIFO0,
+                                   FDCAN_REJECT_REMOTE,
+                                   FDCAN_REJECT_REMOTE) != HAL_OK)
+  {
+      Error_Handler();
+  }
+
+  /*
+   * Start receiver first.
+   * CAN2 must be active before CAN1 starts transmitting,
+   * because CAN2 provides the ACK.
+   */
+  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
+  {
+      Error_Handler();
+  }
+
+  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+  {
+      Error_Handler();
+  }
+
+  txHeader.Identifier = 0x100;
+  txHeader.IdType = FDCAN_STANDARD_ID;
+  txHeader.TxFrameType = FDCAN_DATA_FRAME;
+  txHeader.DataLength = FDCAN_DLC_BYTES_8;
+  txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+  txHeader.BitRateSwitch = FDCAN_BRS_OFF;
+  txHeader.FDFormat = FDCAN_CLASSIC_CAN;
+  txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+  txHeader.MessageMarker = 0;
+
+  const char can_msg[] = "FDCAN1/FDCAN2 started\r\n";
+  HAL_UART_Transmit(&huart1,
+                    (uint8_t *)can_msg,
+                    sizeof(can_msg) - 1,
+                    HAL_MAX_DELAY);
 
   /* USER CODE END 2 */
 
@@ -116,6 +178,73 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  uint32_t now = HAL_GetTick();
+
+	  /* Send one CAN frame every 100 ms */
+	  if ((now - last_tx_tick) >= 100)
+	  {
+	      last_tx_tick = now;
+
+	      uint8_t txData[8];
+
+	      txData[0] = (uint8_t)(can_tx_count);
+	      txData[1] = (uint8_t)(can_tx_count >> 8);
+	      txData[2] = (uint8_t)(can_tx_count >> 16);
+	      txData[3] = (uint8_t)(can_tx_count >> 24);
+
+	      txData[4] = 0xAA;
+	      txData[5] = 0x55;
+	      txData[6] = 0x12;
+	      txData[7] = 0x34;
+
+	      if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1,
+	                                        &txHeader,
+	                                        txData) == HAL_OK)
+	      {
+	          can_tx_count++;
+	      }
+	      else
+	      {
+	          can_tx_error++;
+	      }
+	  }
+
+	  /* Drain everything received by CAN2 */
+	  while (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan2,
+	                                      FDCAN_RX_FIFO0) > 0)
+	  {
+	      FDCAN_RxHeaderTypeDef rxHeader;
+	      uint8_t rxData[8];
+
+	      if (HAL_FDCAN_GetRxMessage(&hfdcan2,
+	                                 FDCAN_RX_FIFO0,
+	                                 &rxHeader,
+	                                 rxData) == HAL_OK)
+	      {
+	          can_rx_count++;
+	      }
+	  }
+
+	  /* Print status once per second */
+	  if ((now - last_report_tick) >= 1000)
+	  {
+	      last_report_tick = now;
+
+	      char msg[96];
+
+	      int len = snprintf(msg,
+	                         sizeof(msg),
+	                         "TX=%lu RX=%lu TXERR=%lu\r\n",
+	                         (unsigned long)can_tx_count,
+	                         (unsigned long)can_rx_count,
+	                         (unsigned long)can_tx_error);
+
+	      HAL_UART_Transmit(&huart1,
+	                        (uint8_t *)msg,
+	                        len,
+	                        HAL_MAX_DELAY);
+	  }
   }
   /* USER CODE END 3 */
 }

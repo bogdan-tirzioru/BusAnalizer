@@ -181,18 +181,14 @@ int main(void)
 
 	  uint32_t now = HAL_GetTick();
 
-	  /* Send one CAN frame every 100 ms */
-	  if ((now - last_tx_tick) >= 100)
+	  while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0)
 	  {
-	      last_tx_tick = now;
-
 	      uint8_t txData[8];
 
 	      txData[0] = (uint8_t)(can_tx_count);
 	      txData[1] = (uint8_t)(can_tx_count >> 8);
 	      txData[2] = (uint8_t)(can_tx_count >> 16);
 	      txData[3] = (uint8_t)(can_tx_count >> 24);
-
 	      txData[4] = 0xAA;
 	      txData[5] = 0x55;
 	      txData[6] = 0x12;
@@ -207,6 +203,7 @@ int main(void)
 	      else
 	      {
 	          can_tx_error++;
+	          break;
 	      }
 	  }
 

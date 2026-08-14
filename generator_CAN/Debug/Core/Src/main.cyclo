@@ -1,9 +1,0 @@
-../Core/Src/main.c:74:5:main	1
-../Core/Src/main.c:127:6:SystemClock_Config	4
-../Core/Src/main.c:185:6:PeriphCommonClock_Config	2
-../Core/Src/main.c:212:13:MX_FDCAN1_Init	2
-../Core/Src/main.c:265:13:MX_FDCAN2_Init	2
-../Core/Src/main.c:318:13:MX_USART1_UART_Init	5
-../Core/Src/main.c:366:13:MX_GPIO_Init	1
-../Core/Src/main.c:399:6:MPU_Config	1
-../Core/Src/main.c:430:6:Error_Handler	1

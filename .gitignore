@@ -8,3 +8,5 @@
 .d
 **/Debug/
 **/Release/
+**/.settings/
+**/.mxproject

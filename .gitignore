@@ -6,3 +6,5 @@
 *.pch
 *.tlog
 .d
+**/Debug/
+**/Release/

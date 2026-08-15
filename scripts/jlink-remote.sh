@@ -40,6 +40,42 @@ is_running() {
     find_server_pid >/dev/null 2>&1 && is_listening
 }
 
+terminate_pid() {
+    local pid="$1"
+
+    if ! [[ "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2>/dev/null; then
+        return 0
+    fi
+
+    kill "$pid" 2>/dev/null || true
+
+    for _ in {1..20}; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    kill -KILL "$pid" 2>/dev/null || true
+    sleep 0.2
+}
+
+cleanup_stale_instances() {
+    local pid
+    local found=0
+
+    while read -r pid; do
+        [[ -z "$pid" ]] && continue
+        found=1
+        echo "Stopping stale ${SERVER_NAME} Remote Server process (PID ${pid})..."
+        terminate_pid "$pid"
+    done < <(pgrep -f "JLinkRemoteServerCLExe.*-USB ${JLINK_SERIAL}.*-Port ${PORT}" || true)
+
+    if (( found != 0 )); then
+        rm -f "$PID_FILE"
+    fi
+}
+
 start_server() {
     local pid
 
@@ -54,6 +90,8 @@ start_server() {
         ss -ltnp 2>/dev/null | grep ":${PORT}" || true
         return 1
     fi
+
+    cleanup_stale_instances
 
     if [[ ! -x "$JLINK_SERVER" ]]; then
         echo "Error: executable not found or not executable:"
@@ -84,6 +122,8 @@ start_server() {
     fi
 
     echo "Error: ${SERVER_NAME} J-Link Remote Server did not start."
+    echo "Stopping failed server process PID ${pid} so it cannot keep the probe busy..."
+    terminate_pid "$pid"
     rm -f "$PID_FILE"
     echo "Last log lines:"
     tail -n 30 "$LOG_FILE" 2>/dev/null || true
@@ -97,26 +137,14 @@ stop_server() {
 
     if [[ -z "$pid" ]]; then
         echo "${SERVER_NAME} J-Link Remote Server is not running."
+        cleanup_stale_instances
         rm -f "$PID_FILE"
         return 0
     fi
 
     echo "Stopping ${SERVER_NAME} J-Link Remote Server (PID ${pid})..."
-    kill "$pid" 2>/dev/null || true
-
-    for _ in {1..20}; do
-        if ! kill -0 "$pid" 2>/dev/null; then
-            break
-        fi
-        sleep 0.1
-    done
-
-    if kill -0 "$pid" 2>/dev/null; then
-        echo "Server did not stop cleanly; sending SIGKILL to PID ${pid}."
-        kill -KILL "$pid" 2>/dev/null || true
-        sleep 0.2
-    fi
-
+    terminate_pid "$pid"
+    cleanup_stale_instances
     rm -f "$PID_FILE"
 
     if is_listening; then

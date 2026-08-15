@@ -2,76 +2,148 @@
 set -u
 
 JLINK_SERVER="$HOME/.eclipse/com.st.stm32cube.ide.mcu.rcp.product_1.11.0_139060369_linux_gtk_x86_64/plugins/com.st.stm32cube.ide.mcu.externaltools.jlink.linux64_2.5.0.202506031126/tools/bin/JLinkRemoteServerCLExe"
-JLINK_SERIAL=""269304468
+JLINK_SERIAL="269304468"
 PORT="19040"
-LOG_FILE="$HOME/jlink-remote.log"
+SERVER_NAME="CAN generator"
+LOG_FILE="$HOME/jlink-remote-generator.log"
+PID_FILE="$HOME/jlink-remote-generator.pid"
 
-is_running() {
+find_server_pid() {
+    local pid=""
+
+    if [[ -f "$PID_FILE" ]]; then
+        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+        if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+            if tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | \
+               grep -Fq -- "-USB $JLINK_SERIAL"; then
+                echo "$pid"
+                return 0
+            fi
+        fi
+        rm -f "$PID_FILE"
+    fi
+
+    pid="$(pgrep -f "JLinkRemoteServerCLExe.*-USB ${JLINK_SERIAL}.*-Port ${PORT}" | head -n 1 || true)"
+    if [[ "$pid" =~ ^[0-9]+$ ]]; then
+        echo "$pid"
+        return 0
+    fi
+
+    return 1
+}
+
+is_listening() {
     ss -ltn 2>/dev/null | grep -qE "LISTEN[[:space:]].*:${PORT}[[:space:]]"
 }
 
+is_running() {
+    find_server_pid >/dev/null 2>&1 && is_listening
+}
+
 start_server() {
+    local pid
+
     if is_running; then
-        echo "J-Link Remote Server is already running on port ${PORT}."
-        exit 0
+        pid="$(find_server_pid)"
+        echo "${SERVER_NAME} J-Link Remote Server is already running (PID ${pid}, port ${PORT})."
+        return 0
+    fi
+
+    if is_listening; then
+        echo "Error: port ${PORT} is already in use by another process."
+        ss -ltnp 2>/dev/null | grep ":${PORT}" || true
+        return 1
     fi
 
     if [[ ! -x "$JLINK_SERVER" ]]; then
         echo "Error: executable not found or not executable:"
         echo "  $JLINK_SERVER"
-        exit 1
+        return 1
     fi
 
-    echo "Starting J-Link Remote Server..."
+    echo "Starting ${SERVER_NAME} J-Link Remote Server..."
     echo "Probe serial: ${JLINK_SERIAL}"
     echo "Port:         ${PORT}"
     echo "Log:          ${LOG_FILE}"
+    echo "PID file:     ${PID_FILE}"
 
     nohup "$JLINK_SERVER" \
         -USB "$JLINK_SERIAL" \
         -Port "$PORT" \
         >>"$LOG_FILE" 2>&1 </dev/null &
 
+    pid=$!
+    echo "$pid" >"$PID_FILE"
+
     sleep 2
 
     if is_running; then
-        echo "J-Link Remote Server started successfully."
+        echo "${SERVER_NAME} J-Link Remote Server started successfully (PID ${pid})."
         ss -ltnp 2>/dev/null | grep ":${PORT}" || true
-    else
-        echo "Error: the server did not start."
-        echo "Last log lines:"
-        tail -n 30 "$LOG_FILE" 2>/dev/null || true
-        exit 1
+        return 0
     fi
+
+    echo "Error: ${SERVER_NAME} J-Link Remote Server did not start."
+    rm -f "$PID_FILE"
+    echo "Last log lines:"
+    tail -n 30 "$LOG_FILE" 2>/dev/null || true
+    return 1
 }
 
 stop_server() {
-    if ! is_running; then
-        echo "J-Link Remote Server is not running."
-        exit 0
+    local pid
+
+    pid="$(find_server_pid || true)"
+
+    if [[ -z "$pid" ]]; then
+        echo "${SERVER_NAME} J-Link Remote Server is not running."
+        rm -f "$PID_FILE"
+        return 0
     fi
 
-    echo "Stopping J-Link Remote Server..."
-    pkill -f 'JLinkRemoteServerCLExe' 2>/dev/null || true
-    sleep 2
+    echo "Stopping ${SERVER_NAME} J-Link Remote Server (PID ${pid})..."
+    kill "$pid" 2>/dev/null || true
 
-    if is_running; then
+    for _ in {1..20}; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            break
+        fi
+        sleep 0.1
+    done
+
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "Server did not stop cleanly; sending SIGKILL to PID ${pid}."
+        kill -KILL "$pid" 2>/dev/null || true
+        sleep 0.2
+    fi
+
+    rm -f "$PID_FILE"
+
+    if is_listening; then
         echo "Error: port ${PORT} is still in use."
         ss -ltnp 2>/dev/null | grep ":${PORT}" || true
-        exit 1
+        return 1
     fi
 
-    echo "J-Link Remote Server stopped."
+    echo "${SERVER_NAME} J-Link Remote Server stopped."
+    return 0
 }
 
 show_status() {
+    local pid
+
     if is_running; then
-        echo "J-Link Remote Server is running."
+        pid="$(find_server_pid)"
+        echo "${SERVER_NAME} J-Link Remote Server is running."
+        echo "Probe serial: ${JLINK_SERIAL}"
+        echo "PID:          ${pid}"
+        echo "Port:         ${PORT}"
         ss -ltnp 2>/dev/null | grep ":${PORT}" || true
-    else
-        echo "J-Link Remote Server is not running."
-        exit 1
+        return 0
     fi
+
+    echo "${SERVER_NAME} J-Link Remote Server is not running."
+    return 1
 }
 
 show_log() {
@@ -82,7 +154,7 @@ show_log() {
 case "${1:-start}" in
     start)   start_server ;;
     stop)    stop_server ;;
-    restart) stop_server; start_server ;;
+    restart) stop_server && start_server ;;
     status)  show_status ;;
     log)     show_log ;;
     *)

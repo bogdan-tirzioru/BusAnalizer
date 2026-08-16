@@ -156,7 +156,7 @@ int main(void)
       "================================\r\n"
       "Boot OK\r\n"
       "CPU      : 400 MHz\r\n"
-      "CAN rate : 500 kbit/s\r\n"
+      "CAN rate : 250 kbit/s\r\n"
       "Pattern  : ID=100 DLC=8 DATA=counter AA 55 12 34\r\n"
       "CAN2     : independent RX validator enabled\r\n"
       "\r\n";

@@ -45,7 +45,7 @@ extern "C" {
 
 /* USER CODE END EC */
 
-/* Exported macro -------------------------------------------------------------*/
+/* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */

@@ -6,21 +6,23 @@
 #include <string.h>
 
 #define CAN1_KERNEL_CLOCK_HZ 8000000UL
-#define CAN1_BITRATE         500000UL
 #define CAN1_SAMPLE_POINT    875U
 
 static void FillCanConfig(BAII_CanConfig *config)
 {
+  uint32_t bitrate = CAN_Sniffer_GetBitrate();
+
   memset(config, 0, sizeof(*config));
   config->channel = BAII_CAN_CHANNEL_1;
   config->mode = BAII_CAN_MODE_LISTEN_ONLY;
   config->frame_format = BAII_CAN_FORMAT_CLASSIC;
   config->fdcan_clock_hz = CAN1_KERNEL_CLOCK_HZ;
-  config->nominal_bitrate = CAN1_BITRATE;
-  config->data_bitrate = CAN1_BITRATE;
+  config->nominal_bitrate = bitrate;
+  config->data_bitrate = bitrate;
   config->nominal_sample_point_permille = CAN1_SAMPLE_POINT;
   config->data_sample_point_permille = CAN1_SAMPLE_POINT;
-  config->nominal_prescaler = 1U;
+  config->nominal_prescaler =
+      (bitrate == CAN_SNIFFER_BITRATE_250K) ? 2U : 1U;
   config->nominal_time_seg1 = 13U;
   config->nominal_time_seg2 = 2U;
   config->nominal_sjw = 1U;
@@ -35,7 +37,7 @@ BAII_StatusCode BAII_Platform_GetInfo(BAII_DeviceInfo *info)
 
   memset(info, 0, sizeof(*info));
   info->firmware_major = 1U;
-  info->firmware_minor = 1U;
+  info->firmware_minor = 2U;
   info->firmware_patch = 0U;
   info->capabilities = BAII_CAP_CAN_CONFIG |
                        BAII_CAP_CAPTURE_STATUS |
@@ -95,21 +97,23 @@ BAII_StatusCode BAII_Platform_SetCanConfig(const BAII_CanConfig *requested,
     return BAII_STATUS_INVALID_PARAM;
   }
 
-  /*
-   * The first sniffer profile is intentionally locked to a safe, passive
-   * 500 kbit/s Classic CAN setup.  Future profiles can add a timing solver
-   * without allowing the probe to transmit onto the monitored bus.
-   */
+  /* Only the two tested passive Classic CAN profiles are accepted. */
   if ((requested->channel != BAII_CAN_CHANNEL_1) ||
       (requested->mode != BAII_CAN_MODE_LISTEN_ONLY) ||
       (requested->frame_format != BAII_CAN_FORMAT_CLASSIC) ||
-      (requested->nominal_bitrate != CAN1_BITRATE) ||
+      ((requested->nominal_bitrate != CAN_SNIFFER_BITRATE_250K) &&
+       (requested->nominal_bitrate != CAN_SNIFFER_BITRATE_500K)) ||
       ((requested->data_bitrate != 0U) &&
-       (requested->data_bitrate != CAN1_BITRATE)) ||
+       (requested->data_bitrate != requested->nominal_bitrate)) ||
       ((requested->nominal_sample_point_permille != 0U) &&
        (requested->nominal_sample_point_permille != CAN1_SAMPLE_POINT)))
   {
     return BAII_STATUS_INVALID_PARAM;
+  }
+
+  if (!CAN_Sniffer_SetBitrate(requested->nominal_bitrate))
+  {
+    return BAII_STATUS_HAL_ERROR;
   }
 
   FillCanConfig(applied);

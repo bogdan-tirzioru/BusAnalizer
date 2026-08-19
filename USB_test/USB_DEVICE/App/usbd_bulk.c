@@ -24,6 +24,9 @@ static uint8_t *USBD_BULK_GetDeviceQualifierDesc(uint16_t *length);
 static USBD_BULK_HandleTypeDef bulk_handle;
 __ALIGN_BEGIN static uint8_t bulk_rx_buffer[BULK_TEST_BLOCK_SIZE] __ALIGN_END;
 static volatile USBD_BULK_StatsTypeDef bulk_stats;
+static uint8_t bulk_command_buffer[BULK_COMMAND_FRAME_SIZE];
+static volatile uint32_t bulk_command_length;
+static volatile uint8_t bulk_command_pending;
 
 USBD_ClassTypeDef USBD_BULK =
 {
@@ -149,6 +152,8 @@ static uint8_t USBD_BULK_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 
   (void)USBD_memset(&bulk_handle, 0, sizeof(bulk_handle));
   (void)USBD_memset((void *)&bulk_stats, 0, sizeof(bulk_stats));
+  bulk_command_length = 0U;
+  bulk_command_pending = 0U;
 
   pdev->pClassDataCmsit[pdev->classId] = &bulk_handle;
   pdev->pClassData = &bulk_handle;
@@ -178,6 +183,8 @@ static uint8_t USBD_BULK_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   pdev->ep_out[BULK_OUT_EP & 0x0FU].is_used = 0U;
 
   bulk_handle.tx_busy = 0U;
+  bulk_command_length = 0U;
+  bulk_command_pending = 0U;
   pdev->pClassDataCmsit[pdev->classId] = NULL;
   pdev->pClassData = NULL;
 
@@ -274,6 +281,19 @@ static uint8_t USBD_BULK_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
   bulk_stats.rx_packets++;
   bulk_stats.rx_bytes += received;
 
+  if ((received == BULK_COMMAND_FRAME_SIZE) &&
+      (bulk_command_pending == 0U) &&
+      (bulk_rx_buffer[0] == 'B') &&
+      (bulk_rx_buffer[1] == 'C') &&
+      (bulk_rx_buffer[2] == 'M') &&
+      (bulk_rx_buffer[3] == 'D'))
+  {
+    (void)USBD_memcpy(bulk_command_buffer, bulk_rx_buffer,
+                      BULK_COMMAND_FRAME_SIZE);
+    bulk_command_length = BULK_COMMAND_FRAME_SIZE;
+    bulk_command_pending = 1U;
+  }
+
   (void)USBD_LL_PrepareReceive(pdev, BULK_OUT_EP,
                                bulk_rx_buffer, BULK_TEST_BLOCK_SIZE);
 
@@ -345,6 +365,32 @@ uint8_t USBD_BULK_TxReady(USBD_HandleTypeDef *pdev)
   }
 
   return (bulk_handle.tx_busy == 0U) ? 1U : 0U;
+}
+
+uint8_t USBD_BULK_GetCommand(uint8_t *buffer,
+                             uint32_t capacity,
+                             uint32_t *length)
+{
+  uint32_t command_length;
+
+  if ((buffer == NULL) || (length == NULL) ||
+      (bulk_command_pending == 0U))
+  {
+    return 0U;
+  }
+
+  command_length = bulk_command_length;
+  if (capacity < command_length)
+  {
+    return 0U;
+  }
+
+  (void)USBD_memcpy(buffer, bulk_command_buffer, command_length);
+  *length = command_length;
+  bulk_command_length = 0U;
+  bulk_command_pending = 0U;
+
+  return 1U;
 }
 
 void USBD_BULK_GetStats(USBD_BULK_StatsTypeDef *stats)

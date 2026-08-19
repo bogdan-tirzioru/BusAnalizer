@@ -53,6 +53,32 @@ USB vendor bulk configured by Linux
 BULK 1s: IN=... B OUT=... B, total IN=... OUT=...
 ```
 
+## Backward command channel
+
+Commands travel from Linux to STM32 as fixed 32-byte `BCMD` frames. Responses
+are fixed 32-byte `BRSP` frames on bulk IN. A response is prioritized after
+the current stream block completes.
+
+| Command | ID | Purpose |
+|---------|----|---------|
+| PING | `0x01` | Echo up to 16 payload bytes |
+| GET_INFO | `0x02` | Read protocol, speed, endpoints and block size |
+| GET_STATS | `0x03` | Read cumulative IN/OUT counters |
+| STREAM_CONTROL | `0x04` | Start or stop continuous IN streaming |
+
+Linux examples:
+
+```bash
+sudo ./bulk_test ping
+sudo ./bulk_test info
+sudo ./bulk_test stats
+sudo ./bulk_test stream stop
+sudo ./bulk_test stream start
+sudo ./bulk_test 10
+```
+
+The normal numeric benchmark automatically enables streaming before measuring.
+
 ## CubeMX warning
 
 CubeMX still describes the generated CDC starting point. Regenerating code can

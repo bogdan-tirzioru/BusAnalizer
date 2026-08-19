@@ -8,6 +8,8 @@ typedef struct
   uint8_t *tx_buffer;
   uint32_t tx_length;
   volatile uint8_t tx_busy;
+  volatile uint8_t tx_zlp_pending;
+  volatile uint8_t tx_zlp_active;
 } USBD_BULK_HandleTypeDef;
 
 static uint8_t USBD_BULK_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
@@ -24,7 +26,7 @@ static uint8_t *USBD_BULK_GetDeviceQualifierDesc(uint16_t *length);
 static USBD_BULK_HandleTypeDef bulk_handle;
 __ALIGN_BEGIN static uint8_t bulk_rx_buffer[BULK_TEST_BLOCK_SIZE] __ALIGN_END;
 static volatile USBD_BULK_StatsTypeDef bulk_stats;
-static uint8_t bulk_command_buffer[BULK_COMMAND_FRAME_SIZE];
+static uint8_t bulk_command_buffer[BULK_COMMAND_MAX_SIZE];
 static volatile uint32_t bulk_command_length;
 static volatile uint8_t bulk_command_pending;
 
@@ -183,6 +185,8 @@ static uint8_t USBD_BULK_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   pdev->ep_out[BULK_OUT_EP & 0x0FU].is_used = 0U;
 
   bulk_handle.tx_busy = 0U;
+  bulk_handle.tx_zlp_pending = 0U;
+  bulk_handle.tx_zlp_active = 0U;
   bulk_command_length = 0U;
   bulk_command_pending = 0U;
   pdev->pClassDataCmsit[pdev->classId] = NULL;
@@ -261,8 +265,22 @@ static uint8_t USBD_BULK_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
     return (uint8_t)USBD_FAIL;
   }
 
+  if (bulk_handle.tx_zlp_pending != 0U)
+  {
+    bulk_handle.tx_zlp_pending = 0U;
+    bulk_handle.tx_zlp_active = 1U;
+    if (USBD_LL_Transmit(pdev, BULK_IN_EP, NULL, 0U) != USBD_OK)
+    {
+      bulk_handle.tx_zlp_active = 0U;
+      bulk_handle.tx_busy = 0U;
+      return (uint8_t)USBD_FAIL;
+    }
+    return (uint8_t)USBD_OK;
+  }
+
   bulk_stats.tx_transfers++;
   bulk_stats.tx_bytes += bulk_handle.tx_length;
+  bulk_handle.tx_zlp_active = 0U;
   bulk_handle.tx_busy = 0U;
 
   return (uint8_t)USBD_OK;
@@ -281,16 +299,16 @@ static uint8_t USBD_BULK_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
   bulk_stats.rx_packets++;
   bulk_stats.rx_bytes += received;
 
-  if ((received == BULK_COMMAND_FRAME_SIZE) &&
+  if ((received >= 20U) &&
+      (received <= BULK_COMMAND_MAX_SIZE) &&
       (bulk_command_pending == 0U) &&
       (bulk_rx_buffer[0] == 'B') &&
-      (bulk_rx_buffer[1] == 'C') &&
-      (bulk_rx_buffer[2] == 'M') &&
-      (bulk_rx_buffer[3] == 'D'))
+      (bulk_rx_buffer[1] == 'A') &&
+      (bulk_rx_buffer[2] == 'I') &&
+      (bulk_rx_buffer[3] == 'I'))
   {
-    (void)USBD_memcpy(bulk_command_buffer, bulk_rx_buffer,
-                      BULK_COMMAND_FRAME_SIZE);
-    bulk_command_length = BULK_COMMAND_FRAME_SIZE;
+    (void)USBD_memcpy(bulk_command_buffer, bulk_rx_buffer, received);
+    bulk_command_length = received;
     bulk_command_pending = 1U;
   }
 
@@ -353,6 +371,21 @@ uint8_t USBD_BULK_Transmit(USBD_HandleTypeDef *pdev,
   }
 
   return (uint8_t)status;
+}
+
+uint8_t USBD_BULK_TransmitControl(USBD_HandleTypeDef *pdev,
+                                  uint8_t *buffer,
+                                  uint32_t length)
+{
+  uint8_t status = USBD_BULK_Transmit(pdev, buffer, length);
+
+  if ((status == USBD_OK) &&
+      ((length % USBD_BULK_MaxPacket(pdev)) == 0U))
+  {
+    bulk_handle.tx_zlp_pending = 1U;
+  }
+
+  return status;
 }
 
 uint8_t USBD_BULK_TxReady(USBD_HandleTypeDef *pdev)

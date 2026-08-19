@@ -22,6 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "logger.h"
+#include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
 
@@ -45,6 +47,13 @@
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+extern USBD_HandleTypeDef hUsbDeviceHS;
+
+static uint8_t cdc_test_buffer[] = "USB_test CDC TX OK\r\n";
+static uint32_t cdc_last_tx_ms;
+static uint32_t cdc_tx_count;
+static uint32_t cdc_busy_count;
+static uint8_t cdc_was_configured;
 
 /* USER CODE END PV */
 
@@ -54,11 +63,58 @@ static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
+static void CDC_Test_Task(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void CDC_Test_Task(void)
+{
+  uint32_t now = HAL_GetTick();
+  uint8_t result;
+
+  if (hUsbDeviceHS.dev_state != USBD_STATE_CONFIGURED)
+  {
+    if (cdc_was_configured != 0U)
+    {
+      cdc_was_configured = 0U;
+      Logger_Write("USB CDC disconnected\r\n");
+    }
+    return;
+  }
+
+  if (cdc_was_configured == 0U)
+  {
+    cdc_was_configured = 1U;
+    cdc_last_tx_ms = now;
+    Logger_Write("USB CDC configured by Linux\r\n");
+  }
+
+  if ((uint32_t)(now - cdc_last_tx_ms) < 1000U)
+  {
+    return;
+  }
+  cdc_last_tx_ms = now;
+
+  result = CDC_Transmit_HS(cdc_test_buffer,
+                           (uint16_t)(sizeof(cdc_test_buffer) - 1U));
+  if (result == USBD_OK)
+  {
+    cdc_tx_count++;
+    Logger_Printf("CDC TX #%lu OK\r\n", (unsigned long)cdc_tx_count);
+  }
+  else if (result == USBD_BUSY)
+  {
+    cdc_busy_count++;
+    Logger_Printf("CDC TX busy count=%lu\r\n",
+                  (unsigned long)cdc_busy_count);
+  }
+  else
+  {
+    Logger_Printf("CDC TX error=%u\r\n", (unsigned int)result);
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -97,6 +153,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
+  Logger_Write("USB CDC stack started; waiting for Linux\r\n");
 
   /* USER CODE END 2 */
 
@@ -107,6 +164,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    CDC_Test_Task();
   }
   /* USER CODE END 3 */
 }
@@ -212,6 +270,10 @@ static void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
+  Logger_Init(&huart1);
+  Logger_Write("\r\nUSB_test starting\r\n");
+  Logger_Printf("CPU clock: %lu Hz\r\n",
+                (unsigned long)HAL_RCC_GetSysClockFreq());
 
   /* USER CODE END USART1_Init 2 */
 

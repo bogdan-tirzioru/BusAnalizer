@@ -1,5 +1,5 @@
-#ifndef USBD_BULK_H
-#define USBD_BULK_H
+#ifndef USBD_GS_USB_H
+#define USBD_GS_USB_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,34 +7,108 @@ extern "C" {
 
 #include "usbd_def.h"
 
-#define BULK_IN_EP                 0x81U
-#define BULK_OUT_EP                0x01U
-#define BULK_FS_MAX_PACKET_SIZE    64U
-#define BULK_HS_MAX_PACKET_SIZE    512U
-#define BULK_TEST_BLOCK_SIZE       4096U
-#define BULK_COMMAND_FRAME_SIZE     32U
+#include <stdint.h>
 
-typedef struct
+#define GS_USB_IN_EP                 0x81U
+#define GS_USB_OUT_EP                0x01U
+#define GS_USB_FS_MAX_PACKET_SIZE    64U
+#define GS_USB_HS_MAX_PACKET_SIZE    512U
+#define GS_USB_HOST_FRAME_SIZE       20U
+
+enum
 {
-  uint32_t tx_transfers;
-  uint32_t tx_bytes;
-  uint32_t rx_packets;
-  uint32_t rx_bytes;
-} USBD_BULK_StatsTypeDef;
+  GS_USB_BREQ_HOST_FORMAT = 0U,
+  GS_USB_BREQ_BITTIMING = 1U,
+  GS_USB_BREQ_MODE = 2U,
+  GS_USB_BREQ_BERR = 3U,
+  GS_USB_BREQ_BT_CONST = 4U,
+  GS_USB_BREQ_DEVICE_CONFIG = 5U,
+  GS_USB_BREQ_TIMESTAMP = 6U
+};
 
-extern USBD_ClassTypeDef USBD_BULK;
+enum
+{
+  GS_CAN_MODE_RESET = 0U,
+  GS_CAN_MODE_START = 1U
+};
 
-uint8_t USBD_BULK_Transmit(USBD_HandleTypeDef *pdev,
-                           uint8_t *buffer,
-                           uint32_t length);
-uint8_t USBD_BULK_TxReady(USBD_HandleTypeDef *pdev);
-uint8_t USBD_BULK_GetCommand(uint8_t *buffer,
-                             uint32_t capacity,
-                             uint32_t *length);
-void USBD_BULK_GetStats(USBD_BULK_StatsTypeDef *stats);
+#define GS_CAN_MODE_LISTEN_ONLY      (1UL << 0)
+#define GS_CAN_FEATURE_LISTEN_ONLY   (1UL << 0)
+#define GS_HOST_FRAME_ECHO_ID_RX     0xFFFFFFFFUL
+
+#define GS_CAN_EFF_FLAG              0x80000000UL
+#define GS_CAN_RTR_FLAG              0x40000000UL
+#define GS_CAN_EFF_MASK              0x1FFFFFFFUL
+#define GS_CAN_SFF_MASK              0x000007FFUL
+
+#if defined(__GNUC__)
+#define GS_USB_PACKED __attribute__((packed))
+#else
+#define GS_USB_PACKED
+#endif
+
+typedef struct GS_USB_PACKED
+{
+  uint32_t byte_order;
+} GS_USB_HostConfig;
+
+typedef struct GS_USB_PACKED
+{
+  uint8_t reserved[3];
+  uint8_t icount;
+  uint32_t sw_version;
+  uint32_t hw_version;
+} GS_USB_DeviceConfig;
+
+typedef struct GS_USB_PACKED
+{
+  uint32_t prop_seg;
+  uint32_t phase_seg1;
+  uint32_t phase_seg2;
+  uint32_t sjw;
+  uint32_t brp;
+} GS_USB_BitTiming;
+
+typedef struct GS_USB_PACKED
+{
+  uint32_t mode;
+  uint32_t flags;
+} GS_USB_Mode;
+
+typedef struct GS_USB_PACKED
+{
+  uint32_t feature;
+  uint32_t fclk_can;
+  uint32_t tseg1_min;
+  uint32_t tseg1_max;
+  uint32_t tseg2_min;
+  uint32_t tseg2_max;
+  uint32_t sjw_max;
+  uint32_t brp_min;
+  uint32_t brp_max;
+  uint32_t brp_inc;
+} GS_USB_BitTimingConst;
+
+typedef struct GS_USB_PACKED
+{
+  uint32_t echo_id;
+  uint32_t can_id;
+  uint8_t can_dlc;
+  uint8_t channel;
+  uint8_t flags;
+  uint8_t reserved;
+  uint8_t data[8];
+} GS_USB_HostFrame;
+
+extern USBD_ClassTypeDef USBD_GS_USB;
+
+uint8_t USBD_GS_USB_Transmit(USBD_HandleTypeDef *pdev,
+                             uint8_t *buffer,
+                             uint32_t length);
+uint8_t USBD_GS_USB_TxReady(USBD_HandleTypeDef *pdev);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* USBD_BULK_H */
+#endif

@@ -28,7 +28,6 @@ bool CAN_CaptureBuffer_Push(const CAN_SnifferFrame *frame)
   }
 
   capture_buffer[write_sequence & (CAN_CAPTURE_CAPACITY - 1U)] = *frame;
-  __DMB();
   write_sequence++;
   return true;
 }
@@ -41,7 +40,6 @@ bool CAN_CaptureBuffer_Pop(CAN_SnifferFrame *frame)
   }
 
   *frame = capture_buffer[read_sequence & (CAN_CAPTURE_CAPACITY - 1U)];
-  __DMB();
   read_sequence++;
   return true;
 }

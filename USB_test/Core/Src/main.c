@@ -103,7 +103,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-CAN_Sniffer_Init();
+  CAN_Sniffer_Init();
   Analyzer_App_Init();
   Logger_Write("CAN1 passive sniffer ready: 500 kbit/s, USB BAII bulk\r\n");
 /* USER CODE END 2 */
@@ -115,8 +115,9 @@ CAN_Sniffer_Init();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-CAN_Sniffer_Process();
+    CAN_Sniffer_Process();
     Analyzer_App_Task();
+  }
 /* USER CODE END 3 */
 }
 

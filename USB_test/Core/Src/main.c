@@ -25,6 +25,8 @@
 #include "logger.h"
 #include "usbd_bulk.h"
 
+#include <string.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +36,22 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define BULK_PROTOCOL_VERSION       1U
+#define BULK_COMMAND_PING           0x01U
+#define BULK_COMMAND_GET_INFO       0x02U
+#define BULK_COMMAND_GET_STATS      0x03U
+#define BULK_COMMAND_STREAM_CONTROL 0x04U
+
+#define BULK_STATUS_OK              0U
+#define BULK_STATUS_BAD_VERSION     1U
+#define BULK_STATUS_BAD_LENGTH      2U
+#define BULK_STATUS_UNSUPPORTED     3U
+#define BULK_STATUS_BAD_ARGUMENT    4U
+
+#define BULK_RESPONSE_NONE          0U
+#define BULK_RESPONSE_PENDING       1U
+#define BULK_RESPONSE_IN_FLIGHT     2U
+#define BULK_PROTOCOL_PAYLOAD_SIZE  16U
 
 /* USER CODE END PD */
 
@@ -50,10 +68,14 @@ UART_HandleTypeDef huart1;
 extern USBD_HandleTypeDef hUsbDeviceHS;
 
 __ALIGN_BEGIN static uint8_t bulk_tx_buffer[BULK_TEST_BLOCK_SIZE] __ALIGN_END;
+static uint8_t bulk_command_buffer[BULK_COMMAND_FRAME_SIZE];
+static uint8_t bulk_response_buffer[BULK_COMMAND_FRAME_SIZE];
 static USBD_BULK_StatsTypeDef bulk_last_stats;
 static uint32_t bulk_sequence;
 static uint32_t bulk_last_log_ms;
 static uint8_t bulk_was_configured;
+static uint8_t bulk_stream_enabled;
+static uint8_t bulk_response_state;
 
 /* USER CODE END PV */
 
@@ -70,6 +92,158 @@ static void Bulk_Test_Task(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static uint16_t Bulk_ReadLe16(const uint8_t *data)
+{
+  return (uint16_t)(((uint16_t)data[0]) |
+                    ((uint16_t)data[1] << 8));
+}
+
+static uint32_t Bulk_ReadLe32(const uint8_t *data)
+{
+  return ((uint32_t)data[0]) |
+         ((uint32_t)data[1] << 8) |
+         ((uint32_t)data[2] << 16) |
+         ((uint32_t)data[3] << 24);
+}
+
+static void Bulk_WriteLe16(uint8_t *data, uint16_t value)
+{
+  data[0] = (uint8_t)value;
+  data[1] = (uint8_t)(value >> 8);
+}
+
+static void Bulk_WriteLe32(uint8_t *data, uint32_t value)
+{
+  data[0] = (uint8_t)value;
+  data[1] = (uint8_t)(value >> 8);
+  data[2] = (uint8_t)(value >> 16);
+  data[3] = (uint8_t)(value >> 24);
+}
+
+static void Bulk_BuildResponse(uint8_t command,
+                               uint8_t status,
+                               uint32_t sequence,
+                               const uint8_t *payload,
+                               uint16_t payload_length)
+{
+  (void)memset(bulk_response_buffer, 0, sizeof(bulk_response_buffer));
+
+  bulk_response_buffer[0] = 'B';
+  bulk_response_buffer[1] = 'R';
+  bulk_response_buffer[2] = 'S';
+  bulk_response_buffer[3] = 'P';
+  bulk_response_buffer[4] = BULK_PROTOCOL_VERSION;
+  bulk_response_buffer[5] = command;
+  bulk_response_buffer[6] = status;
+  Bulk_WriteLe32(&bulk_response_buffer[8], sequence);
+  Bulk_WriteLe16(&bulk_response_buffer[12], payload_length);
+
+  if ((payload != NULL) && (payload_length > 0U))
+  {
+    (void)memcpy(&bulk_response_buffer[16], payload, payload_length);
+  }
+
+  bulk_response_state = BULK_RESPONSE_PENDING;
+}
+
+static void Bulk_HandleCommand(void)
+{
+  USBD_BULK_StatsTypeDef stats;
+  uint8_t payload[BULK_PROTOCOL_PAYLOAD_SIZE] = {0};
+  uint32_t command_length;
+  uint32_t sequence;
+  uint16_t payload_length;
+  uint16_t response_length = 0U;
+  uint8_t command;
+  uint8_t status = BULK_STATUS_OK;
+
+  if (USBD_BULK_GetCommand(bulk_command_buffer,
+                           sizeof(bulk_command_buffer),
+                           &command_length) == 0U)
+  {
+    return;
+  }
+
+  command = bulk_command_buffer[5];
+  sequence = Bulk_ReadLe32(&bulk_command_buffer[8]);
+  payload_length = Bulk_ReadLe16(&bulk_command_buffer[12]);
+
+  if (command_length != BULK_COMMAND_FRAME_SIZE)
+  {
+    status = BULK_STATUS_BAD_LENGTH;
+  }
+  else if (bulk_command_buffer[4] != BULK_PROTOCOL_VERSION)
+  {
+    status = BULK_STATUS_BAD_VERSION;
+  }
+  else if (payload_length > BULK_PROTOCOL_PAYLOAD_SIZE)
+  {
+    status = BULK_STATUS_BAD_LENGTH;
+  }
+  else
+  {
+    switch (command)
+    {
+      case BULK_COMMAND_PING:
+        response_length = payload_length;
+        if (response_length > 0U)
+        {
+          (void)memcpy(payload, &bulk_command_buffer[16], response_length);
+        }
+        break;
+
+      case BULK_COMMAND_GET_INFO:
+        payload[0] = BULK_PROTOCOL_VERSION;
+        payload[1] = (hUsbDeviceHS.dev_speed == USBD_SPEED_HIGH) ? 2U : 1U;
+        payload[2] = BULK_IN_EP;
+        payload[3] = BULK_OUT_EP;
+        Bulk_WriteLe32(&payload[4], BULK_TEST_BLOCK_SIZE);
+        payload[8] = bulk_stream_enabled;
+        payload[9] = 1U;
+        payload[10] = 0U;
+        response_length = 11U;
+        break;
+
+      case BULK_COMMAND_GET_STATS:
+        USBD_BULK_GetStats(&stats);
+        Bulk_WriteLe32(&payload[0], stats.tx_transfers);
+        Bulk_WriteLe32(&payload[4], stats.tx_bytes);
+        Bulk_WriteLe32(&payload[8], stats.rx_packets);
+        Bulk_WriteLe32(&payload[12], stats.rx_bytes);
+        response_length = BULK_PROTOCOL_PAYLOAD_SIZE;
+        break;
+
+      case BULK_COMMAND_STREAM_CONTROL:
+        if ((payload_length != 1U) || (bulk_command_buffer[16] > 1U))
+        {
+          status = BULK_STATUS_BAD_ARGUMENT;
+        }
+        else
+        {
+          bulk_stream_enabled = bulk_command_buffer[16];
+          payload[0] = bulk_stream_enabled;
+          response_length = 1U;
+        }
+        break;
+
+      default:
+        status = BULK_STATUS_UNSUPPORTED;
+        break;
+    }
+  }
+
+  if (status != BULK_STATUS_OK)
+  {
+    response_length = 0U;
+  }
+
+  Bulk_BuildResponse(command, status, sequence, payload, response_length);
+  Logger_Printf("BULK command=%u sequence=%lu status=%u\r\n",
+                (unsigned int)command,
+                (unsigned long)sequence,
+                (unsigned int)status);
+}
+
 static void Bulk_PrepareBlock(uint32_t sequence)
 {
   uint32_t index;
@@ -99,6 +273,7 @@ static void Bulk_Test_Task(void)
     if (bulk_was_configured != 0U)
     {
       bulk_was_configured = 0U;
+      bulk_response_state = BULK_RESPONSE_NONE;
       Logger_Write("USB bulk disconnected\r\n");
     }
     return;
@@ -107,13 +282,37 @@ static void Bulk_Test_Task(void)
   if (bulk_was_configured == 0U)
   {
     bulk_was_configured = 1U;
+    bulk_stream_enabled = 1U;
+    bulk_response_state = BULK_RESPONSE_NONE;
     bulk_sequence = 0U;
     bulk_last_log_ms = now;
     USBD_BULK_GetStats(&bulk_last_stats);
     Logger_Write("USB vendor bulk configured by Linux\r\n");
   }
 
-  if (USBD_BULK_TxReady(&hUsbDeviceHS) != 0U)
+  if ((bulk_response_state == BULK_RESPONSE_IN_FLIGHT) &&
+      (USBD_BULK_TxReady(&hUsbDeviceHS) != 0U))
+  {
+    bulk_response_state = BULK_RESPONSE_NONE;
+  }
+
+  if (bulk_response_state == BULK_RESPONSE_NONE)
+  {
+    Bulk_HandleCommand();
+  }
+
+  if ((bulk_response_state == BULK_RESPONSE_PENDING) &&
+      (USBD_BULK_TxReady(&hUsbDeviceHS) != 0U))
+  {
+    if (USBD_BULK_Transmit(&hUsbDeviceHS, bulk_response_buffer,
+                           BULK_COMMAND_FRAME_SIZE) == USBD_OK)
+    {
+      bulk_response_state = BULK_RESPONSE_IN_FLIGHT;
+    }
+  }
+  else if ((bulk_response_state == BULK_RESPONSE_NONE) &&
+           (bulk_stream_enabled != 0U) &&
+           (USBD_BULK_TxReady(&hUsbDeviceHS) != 0U))
   {
     Bulk_PrepareBlock(bulk_sequence);
     if (USBD_BULK_Transmit(&hUsbDeviceHS, bulk_tx_buffer,

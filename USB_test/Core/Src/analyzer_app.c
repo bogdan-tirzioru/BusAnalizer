@@ -167,7 +167,9 @@ static void SendCanFrames(void)
                                      tx_buffer, sizeof(tx_buffer));
   if (total != 0U)
   {
-    /* Terminate the rare max-packet-aligned message with a ZLP so each\n       libusb read ends on one complete BAII frame. */\n    (void)USBD_BULK_TransmitControl(&hUsbDeviceHS, tx_buffer, total);
+    /* Terminate the rare max-packet-aligned message with a ZLP so each
+       libusb read ends on one complete BAII frame. */
+    (void)USBD_BULK_TransmitControl(&hUsbDeviceHS, tx_buffer, total);
   }
 }
 

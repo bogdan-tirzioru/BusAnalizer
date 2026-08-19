@@ -12,6 +12,7 @@ extern "C" {
 #define BULK_FS_MAX_PACKET_SIZE    64U
 #define BULK_HS_MAX_PACKET_SIZE    512U
 #define BULK_TEST_BLOCK_SIZE       4096U
+#define BULK_COMMAND_FRAME_SIZE     32U
 
 typedef struct
 {
@@ -27,6 +28,9 @@ uint8_t USBD_BULK_Transmit(USBD_HandleTypeDef *pdev,
                            uint8_t *buffer,
                            uint32_t length);
 uint8_t USBD_BULK_TxReady(USBD_HandleTypeDef *pdev);
+uint8_t USBD_BULK_GetCommand(uint8_t *buffer,
+                             uint32_t capacity,
+                             uint32_t *length);
 void USBD_BULK_GetStats(USBD_BULK_StatsTypeDef *stats);
 
 #ifdef __cplusplus

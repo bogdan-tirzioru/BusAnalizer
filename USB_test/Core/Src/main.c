@@ -22,7 +22,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "can_sniffer.h"
+#include "gs_usb_app.h"
+#include "logger.h"
+#include "stm32h7xx_hal_fdcan.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +45,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+FDCAN_HandleTypeDef hfdcan1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
@@ -52,6 +56,7 @@ UART_HandleTypeDef huart1;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_FDCAN1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -94,11 +99,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_FDCAN1_Init();
   MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
+  CAN_Sniffer_Init();
+  GS_USB_App_Init();
+  Logger_Write("CAN1 passive sniffer ready: USB gs_usb / SocketCAN\r\n");
+/* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -107,8 +115,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    CAN_Sniffer_Process();
+    GS_USB_App_Task();
   }
-  /* USER CODE END 3 */
+/* USER CODE END 3 */
 }
 
 /**
@@ -170,6 +180,48 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief FDCAN1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_FDCAN1_Init(void)
+{
+  hfdcan1.Instance = FDCAN1;
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
+  hfdcan1.Init.AutoRetransmission = DISABLE;
+  hfdcan1.Init.TransmitPause = DISABLE;
+  hfdcan1.Init.ProtocolException = DISABLE;
+  hfdcan1.Init.NominalPrescaler = 1U;
+  hfdcan1.Init.NominalSyncJumpWidth = 1U;
+  hfdcan1.Init.NominalTimeSeg1 = 13U;
+  hfdcan1.Init.NominalTimeSeg2 = 2U;
+  hfdcan1.Init.DataPrescaler = 1U;
+  hfdcan1.Init.DataSyncJumpWidth = 1U;
+  hfdcan1.Init.DataTimeSeg1 = 13U;
+  hfdcan1.Init.DataTimeSeg2 = 2U;
+  hfdcan1.Init.MessageRAMOffset = 0U;
+  hfdcan1.Init.StdFiltersNbr = 0U;
+  hfdcan1.Init.ExtFiltersNbr = 0U;
+  hfdcan1.Init.RxFifo0ElmtsNbr = 64U;
+  hfdcan1.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan1.Init.RxFifo1ElmtsNbr = 0U;
+  hfdcan1.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan1.Init.RxBuffersNbr = 0U;
+  hfdcan1.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
+  hfdcan1.Init.TxEventsNbr = 0U;
+  hfdcan1.Init.TxBuffersNbr = 0U;
+  hfdcan1.Init.TxFifoQueueElmtsNbr = 0U;
+  hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
+  hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
+
+  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -212,6 +264,10 @@ static void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
+  Logger_Init(&huart1);
+  Logger_Write("\r\nUSB_test starting\r\n");
+  Logger_Printf("CPU clock: %lu Hz\r\n",
+                (unsigned long)HAL_RCC_GetSysClockFreq());
 
   /* USER CODE END USART1_Init 2 */
 
@@ -224,18 +280,19 @@ static void MX_USART1_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
-  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-  /* USER CODE END MX_GPIO_Init_2 */
+  /* Enable the CAN1 transceiver (FD1_STBM is active high). */
+  HAL_GPIO_WritePin(CAN1_STBY_GPIO_Port, CAN1_STBY_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = CAN1_STBY_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(CAN1_STBY_GPIO_Port, &GPIO_InitStruct);
 }
 
 /* USER CODE BEGIN 4 */

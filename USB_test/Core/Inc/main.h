@@ -58,6 +58,9 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 
+#define CAN1_STBY_Pin GPIO_PIN_3
+#define CAN1_STBY_GPIO_Port GPIOA
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

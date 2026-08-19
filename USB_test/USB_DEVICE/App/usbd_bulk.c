@@ -22,7 +22,7 @@ static uint8_t *USBD_BULK_GetOtherSpeedCfgDesc(uint16_t *length);
 static uint8_t *USBD_BULK_GetDeviceQualifierDesc(uint16_t *length);
 
 static USBD_BULK_HandleTypeDef bulk_handle;
-__ALIGN_BEGIN static uint8_t bulk_rx_buffer[BULK_HS_MAX_PACKET_SIZE] __ALIGN_END;
+__ALIGN_BEGIN static uint8_t bulk_rx_buffer[BULK_TEST_BLOCK_SIZE] __ALIGN_END;
 static volatile USBD_BULK_StatsTypeDef bulk_stats;
 
 USBD_ClassTypeDef USBD_BULK =
@@ -162,7 +162,7 @@ static uint8_t USBD_BULK_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   pdev->ep_out[BULK_OUT_EP & 0x0FU].maxpacket = max_packet;
 
   (void)USBD_LL_PrepareReceive(pdev, BULK_OUT_EP,
-                               bulk_rx_buffer, max_packet);
+                               bulk_rx_buffer, BULK_TEST_BLOCK_SIZE);
 
   return (uint8_t)USBD_OK;
 }
@@ -264,7 +264,6 @@ static uint8_t USBD_BULK_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 static uint8_t USBD_BULK_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
   uint32_t received;
-  uint16_t max_packet;
 
   if ((epnum & 0x0FU) != (BULK_OUT_EP & 0x0FU))
   {
@@ -275,9 +274,8 @@ static uint8_t USBD_BULK_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
   bulk_stats.rx_packets++;
   bulk_stats.rx_bytes += received;
 
-  max_packet = USBD_BULK_MaxPacket(pdev);
   (void)USBD_LL_PrepareReceive(pdev, BULK_OUT_EP,
-                               bulk_rx_buffer, max_packet);
+                               bulk_rx_buffer, BULK_TEST_BLOCK_SIZE);
 
   return (uint8_t)USBD_OK;
 }

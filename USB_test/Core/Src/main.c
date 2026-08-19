@@ -105,7 +105,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   CAN_Sniffer_Init();
   Analyzer_App_Init();
-  Logger_Write("CAN1 passive sniffer ready: 500 kbit/s, USB BAII bulk\r\n");
+  Logger_Printf("CAN1 passive sniffer ready: %lu kbit/s, USB BAII bulk\r\n",
+                (unsigned long)(CAN_Sniffer_GetBitrate() / 1000U));
 /* USER CODE END 2 */
 
   /* Infinite loop */

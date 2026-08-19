@@ -231,7 +231,8 @@ void Analyzer_App_Task(void)
   if ((uint32_t)(now - last_log_ms) >= 1000U)
   {
     frames = CAN_Sniffer_GetRxCount();
-    Logger_Printf("CAN1 500k: %lu fps, buffered=%lu dropped=%lu fifo_lost=%lu\r\n",
+    Logger_Printf("CAN1 %luk: %lu fps, buffered=%lu dropped=%lu fifo_lost=%lu\r\n",
+                  (unsigned long)(CAN_Sniffer_GetBitrate() / 1000U),
                   (unsigned long)(frames - last_logged_frames),
                   (unsigned long)CAN_Sniffer_GetBufferedCount(),
                   (unsigned long)CAN_Sniffer_GetDroppedCount(),

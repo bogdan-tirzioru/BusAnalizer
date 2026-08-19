@@ -1,6 +1,7 @@
 #include "usbd_bulk.h"
 
 #include "usbd_ctlreq.h"
+#include "usbd_core.h"
 
 typedef struct
 {

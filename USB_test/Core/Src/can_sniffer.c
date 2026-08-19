@@ -105,8 +105,6 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferFrame *frame)
 
 void CAN_Sniffer_Init(void)
 {
-  FDCAN_FilterTypeDef filter;
-
   CAN_CaptureBuffer_Init();
   rx_frames = 0U;
   read_errors = 0U;
@@ -114,16 +112,11 @@ void CAN_Sniffer_Init(void)
   max_fifo_fill = 0U;
   capture_running = false;
 
-  memset(&filter, 0, sizeof(filter));
-  filter.IdType = FDCAN_STANDARD_ID;
-  filter.FilterIndex = 0U;
-  filter.FilterType = FDCAN_FILTER_MASK;
-  filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-  filter.FilterID1 = 0U;
-  filter.FilterID2 = 0U;
-
-  if ((HAL_FDCAN_ConfigFilter(&hfdcan1, &filter) != HAL_OK) ||
-      (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
+  /*
+   * With zero explicit filters, the global filter routes all standard,
+   * extended and remote frames to FIFO0.
+   */
+  if ((HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
                                     FDCAN_ACCEPT_IN_RX_FIFO0,
                                     FDCAN_ACCEPT_IN_RX_FIFO0,
                                     FDCAN_FILTER_REMOTE,

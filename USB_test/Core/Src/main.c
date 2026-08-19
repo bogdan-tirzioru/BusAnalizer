@@ -23,7 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "logger.h"
-#include "usbd_cdc_if.h"
+#include "usbd_bulk.h"
 
 /* USER CODE END Includes */
 
@@ -49,11 +49,11 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDeviceHS;
 
-static uint8_t cdc_test_buffer[] = "USB_test CDC TX OK\r\n";
-static uint32_t cdc_last_tx_ms;
-static uint32_t cdc_tx_count;
-static uint32_t cdc_busy_count;
-static uint8_t cdc_was_configured;
+__ALIGN_BEGIN static uint8_t bulk_tx_buffer[BULK_TEST_BLOCK_SIZE] __ALIGN_END;
+static USBD_BULK_StatsTypeDef bulk_last_stats;
+static uint32_t bulk_sequence;
+static uint32_t bulk_last_log_ms;
+static uint8_t bulk_was_configured;
 
 /* USER CODE END PV */
 
@@ -63,56 +63,76 @@ static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-static void CDC_Test_Task(void);
+static void Bulk_PrepareBlock(uint32_t sequence);
+static void Bulk_Test_Task(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void CDC_Test_Task(void)
+static void Bulk_PrepareBlock(uint32_t sequence)
 {
+  uint32_t index;
+
+  bulk_tx_buffer[0] = 'B';
+  bulk_tx_buffer[1] = 'U';
+  bulk_tx_buffer[2] = 'L';
+  bulk_tx_buffer[3] = 'K';
+  bulk_tx_buffer[4] = (uint8_t)(sequence);
+  bulk_tx_buffer[5] = (uint8_t)(sequence >> 8);
+  bulk_tx_buffer[6] = (uint8_t)(sequence >> 16);
+  bulk_tx_buffer[7] = (uint8_t)(sequence >> 24);
+
+  for (index = 8U; index < BULK_TEST_BLOCK_SIZE; index++)
+  {
+    bulk_tx_buffer[index] = (uint8_t)(index + sequence);
+  }
+}
+
+static void Bulk_Test_Task(void)
+{
+  USBD_BULK_StatsTypeDef stats;
   uint32_t now = HAL_GetTick();
-  uint8_t result;
 
   if (hUsbDeviceHS.dev_state != USBD_STATE_CONFIGURED)
   {
-    if (cdc_was_configured != 0U)
+    if (bulk_was_configured != 0U)
     {
-      cdc_was_configured = 0U;
-      Logger_Write("USB CDC disconnected\r\n");
+      bulk_was_configured = 0U;
+      Logger_Write("USB bulk disconnected\r\n");
     }
     return;
   }
 
-  if (cdc_was_configured == 0U)
+  if (bulk_was_configured == 0U)
   {
-    cdc_was_configured = 1U;
-    cdc_last_tx_ms = now;
-    Logger_Write("USB CDC configured by Linux\r\n");
+    bulk_was_configured = 1U;
+    bulk_sequence = 0U;
+    bulk_last_log_ms = now;
+    USBD_BULK_GetStats(&bulk_last_stats);
+    Logger_Write("USB vendor bulk configured by Linux\r\n");
   }
 
-  if ((uint32_t)(now - cdc_last_tx_ms) < 1000U)
+  if (USBD_BULK_TxReady(&hUsbDeviceHS) != 0U)
   {
-    return;
+    Bulk_PrepareBlock(bulk_sequence);
+    if (USBD_BULK_Transmit(&hUsbDeviceHS, bulk_tx_buffer,
+                           BULK_TEST_BLOCK_SIZE) == USBD_OK)
+    {
+      bulk_sequence++;
+    }
   }
-  cdc_last_tx_ms = now;
 
-  result = CDC_Transmit_HS(cdc_test_buffer,
-                           (uint16_t)(sizeof(cdc_test_buffer) - 1U));
-  if (result == USBD_OK)
+  if ((uint32_t)(now - bulk_last_log_ms) >= 1000U)
   {
-    cdc_tx_count++;
-    Logger_Printf("CDC TX #%lu OK\r\n", (unsigned long)cdc_tx_count);
-  }
-  else if (result == USBD_BUSY)
-  {
-    cdc_busy_count++;
-    Logger_Printf("CDC TX busy count=%lu\r\n",
-                  (unsigned long)cdc_busy_count);
-  }
-  else
-  {
-    Logger_Printf("CDC TX error=%u\r\n", (unsigned int)result);
+    USBD_BULK_GetStats(&stats);
+    Logger_Printf("BULK 1s: IN=%lu B OUT=%lu B, total IN=%lu OUT=%lu\r\n",
+                  (unsigned long)(stats.tx_bytes - bulk_last_stats.tx_bytes),
+                  (unsigned long)(stats.rx_bytes - bulk_last_stats.rx_bytes),
+                  (unsigned long)stats.tx_bytes,
+                  (unsigned long)stats.rx_bytes);
+    bulk_last_stats = stats;
+    bulk_last_log_ms = now;
   }
 }
 
@@ -153,7 +173,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-  Logger_Write("USB CDC stack started; waiting for Linux\r\n");
+  Logger_Write("USB vendor bulk stack started; waiting for Linux\r\n");
 
   /* USER CODE END 2 */
 
@@ -164,7 +184,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    CDC_Test_Task();
+    Bulk_Test_Task();
   }
   /* USER CODE END 3 */
 }

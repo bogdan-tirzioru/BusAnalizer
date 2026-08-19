@@ -23,6 +23,66 @@ static uint32_t rx_frames;
 static uint32_t read_errors;
 static uint32_t fifo_lost_events;
 static uint32_t max_fifo_fill;
+static uint32_t current_bitrate = CAN_SNIFFER_BITRATE_500K;
+
+static bool CAN_ConfigureAndStartHardware(void)
+{
+  /*
+   * With zero explicit filters, the global filter routes all standard,
+   * extended and remote frames to FIFO0.
+   */
+  return (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
+                                       FDCAN_ACCEPT_IN_RX_FIFO0,
+                                       FDCAN_ACCEPT_IN_RX_FIFO0,
+                                       FDCAN_FILTER_REMOTE,
+                                       FDCAN_FILTER_REMOTE) == HAL_OK) &&
+         (HAL_FDCAN_ConfigTimestampCounter(
+              &hfdcan1, FDCAN_TIMESTAMP_PRESC_8) == HAL_OK) &&
+         (HAL_FDCAN_EnableTimestampCounter(
+              &hfdcan1, FDCAN_TIMESTAMP_INTERNAL) == HAL_OK) &&
+         (HAL_FDCAN_Start(&hfdcan1) == HAL_OK);
+}
+
+static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
+{
+  uint32_t prescaler;
+
+  if (bitrate == CAN_SNIFFER_BITRATE_250K)
+  {
+    prescaler = 2U;
+  }
+  else if (bitrate == CAN_SNIFFER_BITRATE_500K)
+  {
+    prescaler = 1U;
+  }
+  else
+  {
+    return false;
+  }
+
+  if (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK)
+  {
+    return false;
+  }
+
+  /*
+   * Both profiles use 16 time quanta and an 87.5% sample point.
+   * The 8 MHz FDCAN kernel clock gives:
+   *   prescaler 1 -> 500 kbit/s
+   *   prescaler 2 -> 250 kbit/s
+   */
+  hfdcan1.Init.NominalPrescaler = prescaler;
+  hfdcan1.Init.NominalSyncJumpWidth = 1U;
+  hfdcan1.Init.NominalTimeSeg1 = 13U;
+  hfdcan1.Init.NominalTimeSeg2 = 2U;
+
+  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  {
+    return false;
+  }
+
+  return CAN_ConfigureAndStartHardware();
+}
 
 static uint8_t CAN_DlcToLength(uint8_t dlc)
 {
@@ -111,19 +171,9 @@ void CAN_Sniffer_Init(void)
   fifo_lost_events = 0U;
   max_fifo_fill = 0U;
   capture_running = false;
+  current_bitrate = CAN_SNIFFER_BITRATE_500K;
 
-  /*
-   * With zero explicit filters, the global filter routes all standard,
-   * extended and remote frames to FIFO0.
-   */
-  if ((HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
-                                    FDCAN_ACCEPT_IN_RX_FIFO0,
-                                    FDCAN_ACCEPT_IN_RX_FIFO0,
-                                    FDCAN_FILTER_REMOTE,
-                                    FDCAN_FILTER_REMOTE) != HAL_OK) ||
-      (HAL_FDCAN_ConfigTimestampCounter(&hfdcan1, FDCAN_TIMESTAMP_PRESC_8) != HAL_OK) ||
-      (HAL_FDCAN_EnableTimestampCounter(&hfdcan1, FDCAN_TIMESTAMP_INTERNAL) != HAL_OK) ||
-      (HAL_FDCAN_Start(&hfdcan1) != HAL_OK))
+  if (!CAN_ConfigureAndStartHardware())
   {
     Error_Handler();
   }
@@ -183,6 +233,47 @@ void CAN_Sniffer_Clear(void)
 bool CAN_Sniffer_IsRunning(void)
 {
   return capture_running;
+}
+
+bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
+{
+  uint32_t previous_bitrate;
+  bool was_running;
+
+  if ((bitrate != CAN_SNIFFER_BITRATE_250K) &&
+      (bitrate != CAN_SNIFFER_BITRATE_500K))
+  {
+    return false;
+  }
+  if (bitrate == current_bitrate)
+  {
+    return true;
+  }
+
+  previous_bitrate = current_bitrate;
+  was_running = capture_running;
+  capture_running = false;
+
+  if (!CAN_ApplyBitrateProfile(bitrate))
+  {
+    (void)CAN_ApplyBitrateProfile(previous_bitrate);
+    capture_running = was_running;
+    return false;
+  }
+
+  /*
+   * Do not mix records captured at two bitrates in one USB stream.
+   * Counters remain cumulative so a failed host keep-up is still visible.
+   */
+  CAN_CaptureBuffer_Clear();
+  current_bitrate = bitrate;
+  capture_running = was_running;
+  return true;
+}
+
+uint32_t CAN_Sniffer_GetBitrate(void)
+{
+  return current_bitrate;
 }
 
 uint32_t CAN_Sniffer_GetRxCount(void)

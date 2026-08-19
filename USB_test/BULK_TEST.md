@@ -10,8 +10,8 @@ two bulk endpoints:
 
 The STM32 continuously submits 4096-byte blocks. Every IN block begins with
 `BULK`, followed by a 32-bit little-endian sequence number and a deterministic
-payload. OUT data is consumed and counted. USART1 reports IN/OUT counters once
-per second.
+payload. OUT data is received in 4096-byte windows, consumed, and counted.
+USART1 reports IN/OUT counters once per second.
 
 The experimental USB identity is `0483:5741`. This keeps it distinct from the
 CDC checkpoint `0483:5740`. It is for laboratory use, not a production USB

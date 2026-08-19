@@ -384,7 +384,7 @@ static int show_config(libusb_device_handle *device)
   return (length >= 28U) ? 0 : -1;
 }
 
-static int set_500k_config(libusb_device_handle *device)
+static int set_bitrate_config(libusb_device_handle *device, uint32_t bitrate)
 {
   uint8_t arguments[16] = {0};
   uint8_t response[64];
@@ -393,8 +393,8 @@ static int set_500k_config(libusb_device_handle *device)
   arguments[0] = 1U;
   arguments[1] = 1U;
   arguments[2] = 0U;
-  write_le32(&arguments[4], 500000U);
-  write_le32(&arguments[8], 500000U);
+  write_le32(&arguments[4], bitrate);
+  write_le32(&arguments[8], bitrate);
   write_le16(&arguments[12], 875U);
   write_le16(&arguments[14], 875U);
 
@@ -558,7 +558,8 @@ static int sniff(libusb_device_handle *device, int duration_seconds)
   signal(SIGTERM, on_signal);
   start = monotonic_seconds();
   last_report = start;
-  fprintf(stderr, "Sniffing CAN1 at 500 kbit/s (Ctrl-C to stop)...\n");
+  fprintf(stderr, "Sniffing CAN1 using the active bitrate profile "
+                  "(Ctrl-C to stop)...\n");
 
   while (!stop_requested &&
          ((duration_seconds == 0) ||
@@ -604,7 +605,7 @@ static void usage(const char *program)
           "Usage:\n"
           "  %s info\n"
           "  %s status\n"
-          "  %s config [set500k]\n"
+          "  %s config [set250k|set500k]\n"
           "  %s capture start|stop|clear|status\n"
           "  %s sniff [seconds]\n",
           program, program, program, program, program);
@@ -641,9 +642,11 @@ int main(int argc, char **argv)
     result = show_config(device);
   }
   else if ((argc == 3) && (strcmp(argv[1], "config") == 0) &&
-           (strcmp(argv[2], "set500k") == 0))
+           ((strcmp(argv[2], "set250k") == 0) ||
+            (strcmp(argv[2], "set500k") == 0)))
   {
-    result = set_500k_config(device);
+    result = set_bitrate_config(
+        device, (strcmp(argv[2], "set250k") == 0) ? 250000U : 500000U);
   }
   else if ((argc == 3) && (strcmp(argv[1], "capture") == 0))
   {

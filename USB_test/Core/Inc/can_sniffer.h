@@ -14,6 +14,13 @@ void CAN_Sniffer_Stop(void);
 void CAN_Sniffer_Clear(void);
 bool CAN_Sniffer_IsRunning(void);
 bool CAN_Sniffer_SetBitrate(uint32_t bitrate);
+bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
+                              uint32_t phase_seg1,
+                              uint32_t phase_seg2,
+                              uint32_t sjw,
+                              uint32_t brp);
+bool CAN_Sniffer_StartListenOnly(void);
+void CAN_Sniffer_Reset(void);
 uint32_t CAN_Sniffer_GetBitrate(void);
 
 uint32_t CAN_Sniffer_GetRxCount(void);

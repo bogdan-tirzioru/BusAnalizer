@@ -62,13 +62,13 @@
   * @{
   */
 
-#define USBD_VID     1155
+#define USBD_VID     0x1209U
 #define USBD_LANGID_STRING     1033
-#define USBD_MANUFACTURER_STRING     "STMicroelectronics"
-#define USBD_PID_HS     22337
-#define USBD_PRODUCT_STRING_HS     "USB_test Bulk Device"
-#define USBD_CONFIGURATION_STRING_HS     "Bulk Config"
-#define USBD_INTERFACE_STRING_HS     "Bulk Interface"
+#define USBD_MANUFACTURER_STRING     "BusAnalizer"
+#define USBD_PID_HS     0x2323U
+#define USBD_PRODUCT_STRING_HS     "USB_test gs_usb CAN1"
+#define USBD_CONFIGURATION_STRING_HS     "gs_usb Config"
+#define USBD_INTERFACE_STRING_HS     "gs_usb CAN Interface"
 
 #define USB_SIZ_BOS_DESC            0x0C
 
@@ -431,4 +431,3 @@ static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
 /**
   * @}
   */
-

@@ -24,6 +24,7 @@ static uint32_t read_errors;
 static uint32_t fifo_lost_events;
 static uint32_t max_fifo_fill;
 static uint32_t current_bitrate = CAN_SNIFFER_BITRATE_500K;
+static bool hardware_started;
 
 static bool CAN_ConfigureAndStartHardware(void)
 {
@@ -31,16 +32,23 @@ static bool CAN_ConfigureAndStartHardware(void)
    * With zero explicit filters, the global filter routes all standard,
    * extended and remote frames to FIFO0.
    */
-  return (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
-                                       FDCAN_ACCEPT_IN_RX_FIFO0,
-                                       FDCAN_ACCEPT_IN_RX_FIFO0,
-                                       FDCAN_FILTER_REMOTE,
-                                       FDCAN_FILTER_REMOTE) == HAL_OK) &&
-         (HAL_FDCAN_ConfigTimestampCounter(
-              &hfdcan1, FDCAN_TIMESTAMP_PRESC_8) == HAL_OK) &&
-         (HAL_FDCAN_EnableTimestampCounter(
-              &hfdcan1, FDCAN_TIMESTAMP_INTERNAL) == HAL_OK) &&
-         (HAL_FDCAN_Start(&hfdcan1) == HAL_OK);
+  if ((HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
+                                    FDCAN_ACCEPT_IN_RX_FIFO0,
+                                    FDCAN_ACCEPT_IN_RX_FIFO0,
+                                    FDCAN_FILTER_REMOTE,
+                                    FDCAN_FILTER_REMOTE) != HAL_OK) ||
+      (HAL_FDCAN_ConfigTimestampCounter(
+           &hfdcan1, FDCAN_TIMESTAMP_PRESC_8) != HAL_OK) ||
+      (HAL_FDCAN_EnableTimestampCounter(
+           &hfdcan1, FDCAN_TIMESTAMP_INTERNAL) != HAL_OK) ||
+      (HAL_FDCAN_Start(&hfdcan1) != HAL_OK))
+  {
+    hardware_started = false;
+    return false;
+  }
+
+  hardware_started = true;
+  return true;
 }
 
 static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
@@ -60,10 +68,11 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
     return false;
   }
 
-  if (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK)
+  if (hardware_started && (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK))
   {
     return false;
   }
+  hardware_started = false;
 
   /*
    * Both profiles use 16 time quanta and an 87.5% sample point.
@@ -81,7 +90,7 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
     return false;
   }
 
-  return CAN_ConfigureAndStartHardware();
+  return true;
 }
 
 static uint8_t CAN_DlcToLength(uint8_t dlc)
@@ -171,14 +180,8 @@ void CAN_Sniffer_Init(void)
   fifo_lost_events = 0U;
   max_fifo_fill = 0U;
   capture_running = false;
+  hardware_started = false;
   current_bitrate = CAN_SNIFFER_BITRATE_500K;
-
-  if (!CAN_ConfigureAndStartHardware())
-  {
-    Error_Handler();
-  }
-
-  capture_running = true;
 }
 
 void CAN_Sniffer_Process(void)
@@ -217,12 +220,12 @@ void CAN_Sniffer_Process(void)
 
 void CAN_Sniffer_Start(void)
 {
-  capture_running = true;
+  (void)CAN_Sniffer_StartListenOnly();
 }
 
 void CAN_Sniffer_Stop(void)
 {
-  capture_running = false;
+  CAN_Sniffer_Reset();
 }
 
 void CAN_Sniffer_Clear(void)
@@ -257,7 +260,10 @@ bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
   if (!CAN_ApplyBitrateProfile(bitrate))
   {
     (void)CAN_ApplyBitrateProfile(previous_bitrate);
-    capture_running = was_running;
+    if (was_running)
+    {
+      (void)CAN_Sniffer_StartListenOnly();
+    }
     return false;
   }
 
@@ -267,8 +273,91 @@ bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
    */
   CAN_CaptureBuffer_Clear();
   current_bitrate = bitrate;
-  capture_running = was_running;
+  if (was_running && !CAN_Sniffer_StartListenOnly())
+  {
+    return false;
+  }
   return true;
+}
+
+bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
+                              uint32_t phase_seg1,
+                              uint32_t phase_seg2,
+                              uint32_t sjw,
+                              uint32_t brp)
+{
+  uint32_t time_seg1;
+  uint32_t total_tq;
+
+  if ((prop_seg > 256U) || (phase_seg1 > 256U) ||
+      ((prop_seg + phase_seg1) < 1U) ||
+      ((prop_seg + phase_seg1) > 256U) ||
+      (phase_seg2 < 1U) || (phase_seg2 > 128U) ||
+      (sjw < 1U) || (sjw > 128U) || (sjw > phase_seg2) ||
+      (brp < 1U) || (brp > 512U))
+  {
+    return false;
+  }
+
+  capture_running = false;
+  if (hardware_started && (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK))
+  {
+    return false;
+  }
+  hardware_started = false;
+
+  time_seg1 = prop_seg + phase_seg1;
+  hfdcan1.Init.NominalPrescaler = brp;
+  hfdcan1.Init.NominalSyncJumpWidth = sjw;
+  hfdcan1.Init.NominalTimeSeg1 = time_seg1;
+  hfdcan1.Init.NominalTimeSeg2 = phase_seg2;
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
+
+  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  {
+    return false;
+  }
+
+  total_tq = 1U + time_seg1 + phase_seg2;
+  current_bitrate = 8000000UL / (brp * total_tq);
+  CAN_CaptureBuffer_Clear();
+  return true;
+}
+
+bool CAN_Sniffer_StartListenOnly(void)
+{
+  capture_running = false;
+
+  if (hardware_started)
+  {
+    if (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK)
+    {
+      return false;
+    }
+    hardware_started = false;
+  }
+
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
+  if ((HAL_FDCAN_Init(&hfdcan1) != HAL_OK) ||
+      !CAN_ConfigureAndStartHardware())
+  {
+    return false;
+  }
+
+  CAN_CaptureBuffer_Clear();
+  capture_running = true;
+  return true;
+}
+
+void CAN_Sniffer_Reset(void)
+{
+  capture_running = false;
+  if (hardware_started)
+  {
+    (void)HAL_FDCAN_Stop(&hfdcan1);
+    hardware_started = false;
+  }
+  CAN_CaptureBuffer_Clear();
 }
 
 uint32_t CAN_Sniffer_GetBitrate(void)

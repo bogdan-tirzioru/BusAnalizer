@@ -1,111 +1,79 @@
-# CAN1 passive sniffer over USB bulk
+# USB_test gs_usb CAN1 sniffer
 
-This firmware turns the STM32H750 `USB_test` target into a passive Classic CAN
-sniffer. CAN1 has selectable **250 kbit/s** and **500 kbit/s** listen-only
-profiles, both with an 87.5% sample point. The boot default remains 500 kbit/s.
-Captured frames are buffered in a 4,096-entry (64 KiB) SRAM ring and sent to
-Linux as BusAnalyzerII protocol v0.1 `CAN_DATA` messages over the existing USB
-vendor bulk endpoints.
+This branch exposes the existing STM32H750 CAN1 capture path directly to the
+mainline Linux `gs_usb` driver. Linux creates a SocketCAN network interface, so
+the custom `bulk_test` program and libusb permissions rule are not used here.
 
-## Hardware profile
+The firmware is intentionally RX-only. It advertises Classic CAN and
+listen-only support, accepts Linux bit-timing configuration, and refuses a
+`GS_CAN_MODE_START` request unless the listen-only flag is set.
 
-| Signal | STM32 pin | Configuration |
-| --- | --- | --- |
-| FDCAN1 RX | PA11 | AF9 |
-| FDCAN1 TX | PA12 | AF9; recessive in bus-monitoring mode |
-| CAN1 transceiver standby | PA3 | driven low to enable the transceiver |
-| USB bulk OUT / IN | 0x01 / 0x81 | Full Speed, 64-byte max packet |
+## Firmware and USB identity
 
-The FDCAN kernel clock is the 8 MHz HSE:
+- FDCAN1 RX/TX: PA11/PA12, AF9
+- CAN1 transceiver standby: PA3, low enables the transceiver
+- USB bulk endpoints: OUT `0x01`, IN `0x81`
+- compatible gs_usb identity: `1209:2323`
+- one CAN channel (`can0`)
+- 8 MHz FDCAN kernel clock
+- Classic CAN only
+- 4096 records / 64 KiB local SRAM capture ring
 
-| Profile | Prescaler | Segment 1 | Segment 2 | SJW | Sample point |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 250 kbit/s | 2 | 13 | 2 | 1 | 87.5% |
-| 500 kbit/s | 1 | 13 | 2 | 1 | 87.5% |
+The VID/PID is the compatibility identity recognized by the upstream Linux
+`gs_usb` driver. This is experimental firmware for the BusAnalizer hardware;
+do not use this identity as a product allocation.
 
-The controller does not transmit ACKs or data while in
-`FDCAN_MODE_BUS_MONITORING`.
+## Linux setup at 500 kbit/s
 
-Connect CAN_H, CAN_L and a common ground. Terminate the bus at its two physical
-ends; do not add a third termination at the analyzer unless it is an endpoint.
+Install `can-utils`, flash the firmware, and reconnect USB:
 
-## Linux build
-
-Install the libusb development package and build the host utility:
-
-```sh
-sudo apt install build-essential pkg-config libusb-1.0-0-dev
-cd USB_test/host
-make
+```bash
+sudo modprobe gs_usb
+lsusb -d 1209:2323
+dmesg | tail -30
+ip -details link show can0
 ```
 
-To run without `sudo`, install the included udev rule:
+Bring CAN1 up as a passive 500 kbit/s sniffer:
 
-```sh
-sudo install -m 0644 99-usb-test.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules
-sudo udevadm trigger
+```bash
+sudo ip link set can0 down
+sudo ip link set can0 type can bitrate 500000 sample-point 0.875 listen-only on
+sudo ip link set can0 txqueuelen 1000
+sudo ip link set can0 up
+ip -details -statistics link show can0
+candump -L can0
 ```
 
-Unplug and reconnect the board after installing the rule.
+For 250 kbit/s, replace `500000` with `250000`.
 
-## Commands
+Stop capture with:
 
-```sh
-./bulk_test info
-./bulk_test status
-./bulk_test config
-./bulk_test config set250k
-./bulk_test config set500k
-./bulk_test capture start
-./bulk_test capture stop
-./bulk_test capture clear
-./bulk_test capture status
-./bulk_test sniff
-./bulk_test sniff 30
+```bash
+sudo ip link set can0 down
 ```
 
-`sniff` prints candump-like records and runs until Ctrl-C. A duration in
-seconds may be supplied. To match the existing 250 kbit/s CAN generator:
+## Loss check
 
-```sh
-./bulk_test config set250k
-./bulk_test config
-./bulk_test capture clear
-./bulk_test sniff 30
+During a stress test, inspect both SocketCAN and the USART1 diagnostic output:
+
+```bash
+watch -n 1 'ip -details -statistics link show can0'
 ```
 
-The bitrate change is applied immediately and remains active until reset or
-another profile is selected. Switching profiles clears buffered frames so one
-USB stream never mixes traffic captured at two bitrates. The firmware starts
-capture at boot, while the capture commands allow acquisition to be stopped,
-resumed or cleared independently of USB enumeration.
+The firmware prints `buffered`, `dropped`, and `fifo_lost` once per second on
+USART1. A clean run requires `dropped=0` and `fifo_lost=0`. The ring is drained
+only while `can0` is up; taking the interface down also stops capture and clears
+the ring.
 
-A healthy status under load has both `SRAM dropped` and `FDCAN FIFO lost`
-at zero. The ring uses a drop-new policy when the host cannot keep up, preserving
-the frames already captured and exposing the loss counter.
+## Current scope
 
-## BAII wire format
+- Receive path only; no CAN transmission or echo frames
+- Listen-only mode is mandatory
+- No CAN FD
+- No gs_usb hardware timestamps yet
+- One `gs_host_frame` (20 bytes) is sent per USB transfer
 
-Every USB message begins with the 20-byte little-endian BAII v0.1 header:
-`BAII`, version, message type, flags, transaction ID, sequence and payload
-length. Control messages use command/response types. CAN traffic uses message
-type `0x10`; its payload contains packed records:
-
-| Field | Size |
-| --- | ---: |
-| Timestamp in microseconds | 8 |
-| CAN identifier | 4 |
-| Flags | 2 |
-| Channel | 1 |
-| Raw DLC | 1 |
-| Data length | 1 |
-| Reserved | 1 |
-| Data | 0–8 in this Classic CAN profile |
-
-The capture path accepts standard, extended and RTR frames. Configuration is
-intentionally restricted to the tested passive 250 and 500 kbit/s Classic CAN
-profiles. The 16-bit hardware timestamp is extended in capture order. After an
-idle gap longer than one hardware timestamp wrap (65.536 ms), only modulo-wrap
-timing is available until a future firmware revision adds a wider capture-side
-epoch.
+This small first step deliberately proves the existing acquisition path through
+SocketCAN before adding transmit support, CAN error frames, timestamps, or CAN
+FD.

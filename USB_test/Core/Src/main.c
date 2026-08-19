@@ -22,8 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "analyzer_app.h"
 #include "can_sniffer.h"
+#include "gs_usb_app.h"
 #include "logger.h"
 #include "stm32h7xx_hal_fdcan.h"
 /* USER CODE END Includes */
@@ -104,9 +104,8 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   CAN_Sniffer_Init();
-  Analyzer_App_Init();
-  Logger_Printf("CAN1 passive sniffer ready: %lu kbit/s, USB BAII bulk\r\n",
-                (unsigned long)(CAN_Sniffer_GetBitrate() / 1000U));
+  GS_USB_App_Init();
+  Logger_Write("CAN1 passive sniffer ready: USB gs_usb / SocketCAN\r\n");
 /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,7 +116,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     CAN_Sniffer_Process();
-    Analyzer_App_Task();
+    GS_USB_App_Task();
   }
 /* USER CODE END 3 */
 }

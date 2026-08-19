@@ -1,0 +1,2 @@
+# USB_test / BusAnalyzerII-compatible vendor bulk interface
+SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="5741", MODE="0660", GROUP="plugdev", TAG+="uaccess"

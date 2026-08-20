@@ -20,6 +20,7 @@ static uint32_t can2_rx_frames;
 static uint32_t can2_fifo_lost_events;
 static uint32_t can2_max_fifo_fill;
 static uint8_t can2_started;
+static uint8_t can2_start_attempted;
 static uint8_t was_configured;
 
 static uint8_t CAN2_Validation_Start(void)
@@ -43,14 +44,35 @@ static uint8_t CAN2_Validation_Start(void)
       (HAL_FDCAN_ConfigTimestampCounter(
            &hfdcan2, FDCAN_TIMESTAMP_PRESC_8) != HAL_OK) ||
       (HAL_FDCAN_EnableTimestampCounter(
-           &hfdcan2, FDCAN_TIMESTAMP_INTERNAL) != HAL_OK) ||
-      (HAL_FDCAN_Start(&hfdcan2) != HAL_OK))
+           &hfdcan2, FDCAN_TIMESTAMP_INTERNAL) != HAL_OK))
+  {
+    return 0U;
+  }
+
+  /* Do not carry a stale FIFO-lost indication into a new validation run. */
+  hfdcan2.Instance->IR = FDCAN_IR_RF0L;
+
+  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
   {
     return 0U;
   }
 
   can2_started = 1U;
   return 1U;
+}
+
+static void CAN2_Validation_Stop(void)
+{
+  if (can2_started != 0U)
+  {
+    (void)HAL_FDCAN_Stop(&hfdcan2);
+  }
+
+  can2_started = 0U;
+  can2_start_attempted = 0U;
+  can2_rx_frames = 0U;
+  can2_fifo_lost_events = 0U;
+  can2_max_fifo_fill = 0U;
 }
 
 static void CAN2_Validation_Process(void)
@@ -91,6 +113,11 @@ static void CAN2_Validation_Process(void)
   }
 }
 
+uint32_t GS_USB_App_GetCAN2RxCount(void)
+{
+  return can2_rx_frames;
+}
+
 static uint32_t GS_USB_EncodeCanId(const CAN_SnifferFrame *frame)
 {
   uint32_t can_id;
@@ -117,16 +144,12 @@ void GS_USB_App_Init(void)
   last_log_ms = HAL_GetTick();
   last_logged_frames = 0U;
   last_logged_can2_frames = 0U;
+  can2_rx_frames = 0U;
+  can2_fifo_lost_events = 0U;
+  can2_max_fifo_fill = 0U;
+  can2_started = 0U;
+  can2_start_attempted = 0U;
   was_configured = 0U;
-
-  if (CAN2_Validation_Start() != 0U)
-  {
-    Logger_Write("CAN2 passive validation receiver started\r\n");
-  }
-  else
-  {
-    Logger_Write("CAN2 validation receiver START FAILED\r\n");
-  }
 }
 
 void GS_USB_App_Task(void)
@@ -136,15 +159,13 @@ void GS_USB_App_Task(void)
   uint32_t frames;
   uint32_t can2_frames;
 
-  /* CAN2 validation runs even before Linux configures the USB interface. */
-  CAN2_Validation_Process();
-
   if (hUsbDeviceHS.dev_state != USBD_STATE_CONFIGURED)
   {
     if (was_configured != 0U)
     {
       was_configured = 0U;
       CAN_Sniffer_Reset();
+      CAN2_Validation_Stop();
       Logger_Write("gs_usb disconnected\r\n");
     }
     return;
@@ -153,11 +174,31 @@ void GS_USB_App_Task(void)
   if (was_configured == 0U)
   {
     was_configured = 1U;
-    last_log_ms = now;
-    last_logged_frames = CAN_Sniffer_GetRxCount();
-    last_logged_can2_frames = can2_rx_frames;
+
+    /*
+     * Perform the one-time blocking USB status print before FDCAN2 is started.
+     * This prevents boot/status UART traffic from filling CAN2 FIFO0 and
+     * contaminating the validation lost/max statistics.
+     */
     Logger_Write("gs_usb configured; waiting for SocketCAN link-up\r\n");
+
+    if (can2_start_attempted == 0U)
+    {
+      can2_start_attempted = 1U;
+      if (CAN2_Validation_Start() == 0U)
+      {
+        Logger_Write("CAN2 validation receiver START FAILED\r\n");
+      }
+    }
+
+    now = HAL_GetTick();
+    last_log_ms = now;
+    can2_frames = can2_rx_frames;
+    last_logged_frames = CAN_Sniffer_GetRxCount() - can2_frames;
+    last_logged_can2_frames = can2_frames;
   }
+
+  CAN2_Validation_Process();
 
   if ((USBD_GS_USB_TxReady(&hUsbDeviceHS) != 0U) &&
       CAN_CaptureBuffer_Pop(&frame))
@@ -198,8 +239,8 @@ void GS_USB_App_Task(void)
 
   if ((uint32_t)(now - last_log_ms) >= 1000U)
   {
-    frames = CAN_Sniffer_GetRxCount();
     can2_frames = can2_rx_frames;
+    frames = CAN_Sniffer_GetRxCount() - can2_frames;
 
     Logger_Printf("CAN1 %lu fps buf=%lu drop=%lu lost=%lu | CAN2 %lu fps lost=%lu max=%lu\r\n",
                   (unsigned long)(frames - last_logged_frames),

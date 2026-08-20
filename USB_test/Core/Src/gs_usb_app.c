@@ -69,25 +69,46 @@ void GS_USB_App_Task(void)
   if ((USBD_GS_USB_TxReady(&hUsbDeviceHS) != 0U) &&
       CAN_CaptureBuffer_Pop(&frame))
   {
+    uint32_t usb_length = GS_USB_CLASSIC_HOST_FRAME_SIZE;
+
     (void)memset(&tx_frame, 0, sizeof(tx_frame));
     tx_frame.echo_id = GS_HOST_FRAME_ECHO_ID_RX;
     tx_frame.can_id = GS_USB_EncodeCanId(&frame);
     tx_frame.can_dlc = frame.dlc & 0x0FU;
     tx_frame.channel = 0U;
+
+    if ((frame.flags & CAN_FRAME_FLAG_FD) != 0U)
+    {
+      tx_frame.flags |= GS_CAN_FLAG_FD;
+      usb_length = GS_USB_FD_HOST_FRAME_SIZE;
+
+      if ((frame.flags & CAN_FRAME_FLAG_BRS) != 0U)
+      {
+        tx_frame.flags |= GS_CAN_FLAG_BRS;
+      }
+      if ((frame.flags & CAN_FRAME_FLAG_ESI) != 0U)
+      {
+        tx_frame.flags |= GS_CAN_FLAG_ESI;
+      }
+    }
+
     if ((frame.flags & CAN_FRAME_FLAG_RTR) == 0U)
     {
-      (void)memcpy(tx_frame.data, frame.data, sizeof(tx_frame.data));
+      (void)memcpy(tx_frame.data, frame.data,
+                   ((frame.flags & CAN_FRAME_FLAG_FD) != 0U) ? 64U : 8U);
     }
+
     (void)USBD_GS_USB_Transmit(&hUsbDeviceHS,
                                (uint8_t *)&tx_frame,
-                               sizeof(tx_frame));
+                               usb_length);
   }
 
   if ((uint32_t)(now - last_log_ms) >= 1000U)
   {
     frames = CAN_Sniffer_GetRxCount();
-    Logger_Printf("SocketCAN CAN1 %luk: %lu fps, buffered=%lu dropped=%lu fifo_lost=%lu\r\n",
+    Logger_Printf("SocketCAN CAN1 %luk/%luk FD: %lu fps, buffered=%lu dropped=%lu fifo_lost=%lu\r\n",
                   (unsigned long)(CAN_Sniffer_GetBitrate() / 1000U),
+                  (unsigned long)(CAN_Sniffer_GetDataBitrate() / 1000U),
                   (unsigned long)(frames - last_logged_frames),
                   (unsigned long)CAN_Sniffer_GetBufferedCount(),
                   (unsigned long)CAN_Sniffer_GetDroppedCount(),

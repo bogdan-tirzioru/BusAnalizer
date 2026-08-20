@@ -17,6 +17,7 @@
 #define RX_ELEMENT_FDF_MASK   0x00200000U
 
 extern FDCAN_HandleTypeDef hfdcan1;
+extern uint32_t GS_USB_App_GetCAN2RxCount(void);
 
 static volatile bool capture_running;
 static uint32_t rx_frames;
@@ -441,7 +442,8 @@ uint32_t CAN_Sniffer_GetDataBitrate(void)
 
 uint32_t CAN_Sniffer_GetRxCount(void)
 {
-  return rx_frames;
+  /* CPU-load accounting uses the aggregate receive workload of both FDCANs. */
+  return rx_frames + GS_USB_App_GetCAN2RxCount();
 }
 
 uint32_t CAN_Sniffer_GetErrorCount(void)

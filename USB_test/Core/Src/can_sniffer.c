@@ -4,6 +4,7 @@
 #include "main.h"
 #include "stm32h7xx_hal_fdcan.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #define RX_ELEMENT_STDID_MASK 0x1FFC0000U
@@ -17,45 +18,84 @@
 #define RX_ELEMENT_FDF_MASK   0x00200000U
 
 extern FDCAN_HandleTypeDef hfdcan1;
-extern uint32_t GS_USB_App_GetCAN2RxCount(void);
+extern FDCAN_HandleTypeDef hfdcan2;
 
-static volatile bool capture_running;
-static uint32_t rx_frames;
-static uint32_t read_errors;
-static uint32_t fifo_lost_events;
-static uint32_t max_fifo_fill;
-static uint32_t current_bitrate = CAN_SNIFFER_BITRATE_1M;
-static uint32_t current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
-static bool hardware_started;
-static bool current_can_fd = true;
+typedef struct
+{
+  FDCAN_HandleTypeDef *hfdcan;
+  uint32_t rx_frames;
+  uint32_t read_errors;
+  uint32_t fifo_lost_events;
+  uint32_t max_fifo_fill;
+  uint32_t current_bitrate;
+  uint32_t current_data_bitrate;
+  bool capture_running;
+  bool hardware_started;
+  bool current_can_fd;
+  uint8_t channel;
+} CAN_SnifferChannel;
 
-static bool CAN_ConfigureAndStartHardware(void)
+static CAN_SnifferChannel channels[CAN_SNIFFER_CHANNEL_COUNT];
+static uint8_t process_first_channel;
+
+static CAN_SnifferChannel *CAN_GetChannel(uint8_t channel)
+{
+  if (channel >= CAN_SNIFFER_CHANNEL_COUNT)
+  {
+    return NULL;
+  }
+  return &channels[channel];
+}
+
+static bool CAN_StopHardware(CAN_SnifferChannel *ctx)
+{
+  if (ctx->hardware_started)
+  {
+    if (HAL_FDCAN_Stop(ctx->hfdcan) != HAL_OK)
+    {
+      return false;
+    }
+    ctx->hardware_started = false;
+  }
+  return true;
+}
+
+static bool CAN_ConfigureAndStartHardware(CAN_SnifferChannel *ctx)
 {
   /*
    * With zero explicit filters, the global filter routes all standard,
-   * extended and remote frames to FIFO0. FDCAN remains in bus-monitoring
-   * mode, so this analyzer never ACKs or otherwise drives the CAN bus.
+   * extended and remote frames to FIFO0. Both FDCAN instances remain in
+   * bus-monitoring mode, so neither analyzer channel ACKs or drives the bus.
    */
-  if ((HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
+  if ((HAL_FDCAN_ConfigGlobalFilter(ctx->hfdcan,
                                     FDCAN_ACCEPT_IN_RX_FIFO0,
                                     FDCAN_ACCEPT_IN_RX_FIFO0,
                                     FDCAN_FILTER_REMOTE,
                                     FDCAN_FILTER_REMOTE) != HAL_OK) ||
       (HAL_FDCAN_ConfigTimestampCounter(
-           &hfdcan1, FDCAN_TIMESTAMP_PRESC_8) != HAL_OK) ||
+           ctx->hfdcan, FDCAN_TIMESTAMP_PRESC_8) != HAL_OK) ||
       (HAL_FDCAN_EnableTimestampCounter(
-           &hfdcan1, FDCAN_TIMESTAMP_INTERNAL) != HAL_OK) ||
-      (HAL_FDCAN_Start(&hfdcan1) != HAL_OK))
+           ctx->hfdcan, FDCAN_TIMESTAMP_INTERNAL) != HAL_OK))
   {
-    hardware_started = false;
+    ctx->hardware_started = false;
     return false;
   }
 
-  hardware_started = true;
+  /* Do not carry a stale FIFO-lost indication into a new channel run. */
+  ctx->hfdcan->Instance->IR = FDCAN_IR_RF0L;
+
+  if (HAL_FDCAN_Start(ctx->hfdcan) != HAL_OK)
+  {
+    ctx->hardware_started = false;
+    return false;
+  }
+
+  ctx->hardware_started = true;
   return true;
 }
 
-static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
+static bool CAN_ApplyBitrateProfileChannel(CAN_SnifferChannel *ctx,
+                                           uint32_t bitrate)
 {
   uint32_t prescaler;
 
@@ -76,11 +116,11 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
     return false;
   }
 
-  if (hardware_started && (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK))
+  if (!CAN_StopHardware(ctx))
   {
     return false;
   }
-  hardware_started = false;
+  ctx->capture_running = false;
 
   /*
    * All convenience profiles use 16 time quanta and an 87.5% sample point.
@@ -89,18 +129,20 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
    *   prescaler 10 -> 500 kbit/s
    *   prescaler  5 ->   1 Mbit/s
    */
-  hfdcan1.Init.FrameFormat = current_can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
-  hfdcan1.Init.NominalPrescaler = prescaler;
-  hfdcan1.Init.NominalSyncJumpWidth = 2U;
-  hfdcan1.Init.NominalTimeSeg1 = 13U;
-  hfdcan1.Init.NominalTimeSeg2 = 2U;
+  ctx->hfdcan->Init.FrameFormat =
+      ctx->current_can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
+  ctx->hfdcan->Init.Mode = FDCAN_MODE_BUS_MONITORING;
+  ctx->hfdcan->Init.NominalPrescaler = prescaler;
+  ctx->hfdcan->Init.NominalSyncJumpWidth = 2U;
+  ctx->hfdcan->Init.NominalTimeSeg1 = 13U;
+  ctx->hfdcan->Init.NominalTimeSeg2 = 2U;
 
-  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  if (HAL_FDCAN_Init(ctx->hfdcan) != HAL_OK)
   {
     return false;
   }
 
+  ctx->current_bitrate = bitrate;
   return true;
 }
 
@@ -114,7 +156,8 @@ static uint8_t CAN_DlcToLength(uint8_t dlc)
   return lengths[dlc & 0x0FU];
 }
 
-static bool CAN_ReadFifo0Direct(CAN_SnifferFrame *frame)
+static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
+                                CAN_SnifferFrame *frame)
 {
   uint32_t fifo_status;
   uint32_t get_index;
@@ -124,27 +167,28 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferFrame *frame)
   uint8_t length;
   uint32_t i;
 
-  fifo_status = hfdcan1.Instance->RXF0S;
+  fifo_status = ctx->hfdcan->Instance->RXF0S;
   if ((fifo_status & FDCAN_RXF0S_F0FL) == 0U)
   {
     return false;
   }
 
   get_index = (fifo_status & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_Pos;
-  element = (uint32_t *)(hfdcan1.msgRam.RxFIFO0SA +
-                         (get_index * hfdcan1.Init.RxFifo0ElmtSize * 4U));
+  element = (uint32_t *)(ctx->hfdcan->msgRam.RxFIFO0SA +
+                         (get_index * ctx->hfdcan->Init.RxFifo0ElmtSize * 4U));
   word0 = element[0];
   word1 = element[1];
+
+  frame->flags = (ctx->channel == 1U) ? CAN_FRAME_FLAG_CHANNEL_1 : 0U;
 
   if ((word0 & RX_ELEMENT_XTD_MASK) != 0U)
   {
     frame->id = word0 & RX_ELEMENT_EXTID_MASK;
-    frame->flags = CAN_FRAME_FLAG_EXTENDED;
+    frame->flags |= CAN_FRAME_FLAG_EXTENDED;
   }
   else
   {
     frame->id = (word0 & RX_ELEMENT_STDID_MASK) >> 18;
-    frame->flags = 0U;
   }
 
   if ((word0 & RX_ELEMENT_RTR_MASK) != 0U)
@@ -186,55 +230,84 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferFrame *frame)
     frame->data[i] = ((uint8_t *)&element[2])[i];
   }
 
-  hfdcan1.Instance->RXF0A = get_index;
+  ctx->hfdcan->Instance->RXF0A = get_index;
   return true;
 }
 
-void CAN_Sniffer_Init(void)
-{
-  CAN_CaptureBuffer_Init();
-  rx_frames = 0U;
-  read_errors = 0U;
-  fifo_lost_events = 0U;
-  max_fifo_fill = 0U;
-  capture_running = false;
-  hardware_started = false;
-  current_bitrate = CAN_SNIFFER_BITRATE_1M;
-  current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
-  current_can_fd = true;
-}
-
-void CAN_Sniffer_Process(void)
+static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
 {
   CAN_SnifferFrame frame;
   uint32_t fifo_status;
   uint32_t fill;
 
-  fifo_status = hfdcan1.Instance->RXF0S;
-  fill = fifo_status & FDCAN_RXF0S_F0FL;
-  if (fill > max_fifo_fill)
+  if (!ctx->hardware_started)
   {
-    max_fifo_fill = fill;
-  }
-  if ((fifo_status & FDCAN_RXF0S_RF0L) != 0U)
-  {
-    fifo_lost_events++;
-    hfdcan1.Instance->IR = FDCAN_IR_RF0L;
+    return;
   }
 
-  while ((hfdcan1.Instance->RXF0S & FDCAN_RXF0S_F0FL) != 0U)
+  fifo_status = ctx->hfdcan->Instance->RXF0S;
+  fill = fifo_status & FDCAN_RXF0S_F0FL;
+  if (fill > ctx->max_fifo_fill)
   {
-    if (!CAN_ReadFifo0Direct(&frame))
+    ctx->max_fifo_fill = fill;
+  }
+
+  if ((fifo_status & FDCAN_RXF0S_RF0L) != 0U)
+  {
+    ctx->fifo_lost_events++;
+    ctx->hfdcan->Instance->IR = FDCAN_IR_RF0L;
+  }
+
+  while ((ctx->hfdcan->Instance->RXF0S & FDCAN_RXF0S_F0FL) != 0U)
+  {
+    if (!CAN_ReadFifo0Direct(ctx, &frame))
     {
-      read_errors++;
+      ctx->read_errors++;
       break;
     }
 
-    rx_frames++;
-    if (capture_running)
+    ctx->rx_frames++;
+    if (ctx->capture_running)
     {
       (void)CAN_CaptureBuffer_Push(&frame);
     }
+  }
+}
+
+void CAN_Sniffer_Init(void)
+{
+  memset(channels, 0, sizeof(channels));
+
+  channels[0].hfdcan = &hfdcan1;
+  channels[0].channel = 0U;
+  channels[0].current_bitrate = CAN_SNIFFER_BITRATE_1M;
+  channels[0].current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
+  channels[0].current_can_fd = true;
+
+  channels[1].hfdcan = &hfdcan2;
+  channels[1].channel = 1U;
+  channels[1].current_bitrate = CAN_SNIFFER_BITRATE_1M;
+  channels[1].current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
+  channels[1].current_can_fd = true;
+
+  process_first_channel = 0U;
+  CAN_CaptureBuffer_Init();
+}
+
+void CAN_Sniffer_Process(void)
+{
+  /* Alternate the first fully-drained FIFO to avoid a fixed channel bias. */
+  if (process_first_channel == 0U)
+  {
+    CAN_ProcessChannel(&channels[0]);
+    CAN_ProcessChannel(&channels[1]);
+    process_first_channel = 1U;
+  }
+  else
+  {
+    CAN_ProcessChannel(&channels[1]);
+    CAN_ProcessChannel(&channels[0]);
+    process_first_channel = 0U;
   }
 }
 
@@ -255,11 +328,18 @@ void CAN_Sniffer_Clear(void)
 
 bool CAN_Sniffer_IsRunning(void)
 {
-  return capture_running;
+  return CAN_Sniffer_IsChannelRunning(0U);
+}
+
+bool CAN_Sniffer_IsChannelRunning(uint8_t channel)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
+  return (ctx != NULL) ? ctx->capture_running : false;
 }
 
 bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
 {
+  CAN_SnifferChannel *ctx = &channels[0];
   uint32_t previous_bitrate;
   bool was_running;
 
@@ -269,18 +349,17 @@ bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
   {
     return false;
   }
-  if (bitrate == current_bitrate)
+  if (bitrate == ctx->current_bitrate)
   {
     return true;
   }
 
-  previous_bitrate = current_bitrate;
-  was_running = capture_running;
-  capture_running = false;
+  previous_bitrate = ctx->current_bitrate;
+  was_running = ctx->capture_running;
 
-  if (!CAN_ApplyBitrateProfile(bitrate))
+  if (!CAN_ApplyBitrateProfileChannel(ctx, bitrate))
   {
-    (void)CAN_ApplyBitrateProfile(previous_bitrate);
+    (void)CAN_ApplyBitrateProfileChannel(ctx, previous_bitrate);
     if (was_running)
     {
       (void)CAN_Sniffer_StartListenOnly();
@@ -288,8 +367,6 @@ bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
     return false;
   }
 
-  CAN_CaptureBuffer_Clear();
-  current_bitrate = bitrate;
   if (was_running && !CAN_Sniffer_StartListenOnly())
   {
     return false;
@@ -303,10 +380,23 @@ bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
                               uint32_t sjw,
                               uint32_t brp)
 {
+  return CAN_Sniffer_SetBitTimingChannel(0U, prop_seg, phase_seg1,
+                                         phase_seg2, sjw, brp);
+}
+
+bool CAN_Sniffer_SetBitTimingChannel(uint8_t channel,
+                                     uint32_t prop_seg,
+                                     uint32_t phase_seg1,
+                                     uint32_t phase_seg2,
+                                     uint32_t sjw,
+                                     uint32_t brp)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
   uint32_t time_seg1;
   uint32_t total_tq;
 
-  if ((prop_seg > 256U) || (phase_seg1 > 256U) ||
+  if ((ctx == NULL) ||
+      (prop_seg > 256U) || (phase_seg1 > 256U) ||
       ((prop_seg + phase_seg1) < 1U) ||
       ((prop_seg + phase_seg1) > 256U) ||
       (phase_seg2 < 1U) || (phase_seg2 > 128U) ||
@@ -316,29 +406,28 @@ bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
     return false;
   }
 
-  capture_running = false;
-  if (hardware_started && (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK))
+  ctx->capture_running = false;
+  if (!CAN_StopHardware(ctx))
   {
     return false;
   }
-  hardware_started = false;
 
   time_seg1 = prop_seg + phase_seg1;
-  hfdcan1.Init.FrameFormat = current_can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
-  hfdcan1.Init.NominalPrescaler = brp;
-  hfdcan1.Init.NominalSyncJumpWidth = sjw;
-  hfdcan1.Init.NominalTimeSeg1 = time_seg1;
-  hfdcan1.Init.NominalTimeSeg2 = phase_seg2;
+  ctx->hfdcan->Init.FrameFormat =
+      ctx->current_can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
+  ctx->hfdcan->Init.Mode = FDCAN_MODE_BUS_MONITORING;
+  ctx->hfdcan->Init.NominalPrescaler = brp;
+  ctx->hfdcan->Init.NominalSyncJumpWidth = sjw;
+  ctx->hfdcan->Init.NominalTimeSeg1 = time_seg1;
+  ctx->hfdcan->Init.NominalTimeSeg2 = phase_seg2;
 
-  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  if (HAL_FDCAN_Init(ctx->hfdcan) != HAL_OK)
   {
     return false;
   }
 
   total_tq = 1U + time_seg1 + phase_seg2;
-  current_bitrate = CAN_SNIFFER_FDCAN_CLOCK_HZ / (brp * total_tq);
-  CAN_CaptureBuffer_Clear();
+  ctx->current_bitrate = CAN_SNIFFER_FDCAN_CLOCK_HZ / (brp * total_tq);
   return true;
 }
 
@@ -348,10 +437,23 @@ bool CAN_Sniffer_SetDataBitTiming(uint32_t prop_seg,
                                   uint32_t sjw,
                                   uint32_t brp)
 {
+  return CAN_Sniffer_SetDataBitTimingChannel(0U, prop_seg, phase_seg1,
+                                             phase_seg2, sjw, brp);
+}
+
+bool CAN_Sniffer_SetDataBitTimingChannel(uint8_t channel,
+                                         uint32_t prop_seg,
+                                         uint32_t phase_seg1,
+                                         uint32_t phase_seg2,
+                                         uint32_t sjw,
+                                         uint32_t brp)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
   uint32_t time_seg1;
   uint32_t total_tq;
 
-  if ((prop_seg > 32U) || (phase_seg1 > 32U) ||
+  if ((ctx == NULL) ||
+      (prop_seg > 32U) || (phase_seg1 > 32U) ||
       ((prop_seg + phase_seg1) < 1U) ||
       ((prop_seg + phase_seg1) > 32U) ||
       (phase_seg2 < 1U) || (phase_seg2 > 16U) ||
@@ -361,94 +463,141 @@ bool CAN_Sniffer_SetDataBitTiming(uint32_t prop_seg,
     return false;
   }
 
-  capture_running = false;
-  if (hardware_started && (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK))
+  ctx->capture_running = false;
+  if (!CAN_StopHardware(ctx))
   {
     return false;
   }
-  hardware_started = false;
 
   time_seg1 = prop_seg + phase_seg1;
-  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
-  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
-  hfdcan1.Init.DataPrescaler = brp;
-  hfdcan1.Init.DataSyncJumpWidth = sjw;
-  hfdcan1.Init.DataTimeSeg1 = time_seg1;
-  hfdcan1.Init.DataTimeSeg2 = phase_seg2;
+  ctx->hfdcan->Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  ctx->hfdcan->Init.Mode = FDCAN_MODE_BUS_MONITORING;
+  ctx->hfdcan->Init.DataPrescaler = brp;
+  ctx->hfdcan->Init.DataSyncJumpWidth = sjw;
+  ctx->hfdcan->Init.DataTimeSeg1 = time_seg1;
+  ctx->hfdcan->Init.DataTimeSeg2 = phase_seg2;
 
-  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  if (HAL_FDCAN_Init(ctx->hfdcan) != HAL_OK)
   {
     return false;
   }
 
   total_tq = 1U + time_seg1 + phase_seg2;
-  current_data_bitrate = CAN_SNIFFER_FDCAN_CLOCK_HZ / (brp * total_tq);
-  CAN_CaptureBuffer_Clear();
+  ctx->current_data_bitrate =
+      CAN_SNIFFER_FDCAN_CLOCK_HZ / (brp * total_tq);
   return true;
 }
 
 bool CAN_Sniffer_StartListenOnly(void)
 {
-  return CAN_Sniffer_StartListenOnlyMode(current_can_fd);
+  return CAN_Sniffer_StartListenOnlyMode(channels[0].current_can_fd);
 }
 
 bool CAN_Sniffer_StartListenOnlyMode(bool can_fd)
 {
-  capture_running = false;
+  return CAN_Sniffer_StartListenOnlyModeChannel(0U, can_fd);
+}
 
-  if (hardware_started)
-  {
-    if (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK)
-    {
-      return false;
-    }
-    hardware_started = false;
-  }
+bool CAN_Sniffer_StartListenOnlyModeChannel(uint8_t channel, bool can_fd)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
 
-  hfdcan1.Init.FrameFormat = can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
-  if ((HAL_FDCAN_Init(&hfdcan1) != HAL_OK) ||
-      !CAN_ConfigureAndStartHardware())
+  if (ctx == NULL)
   {
     return false;
   }
 
-  current_can_fd = can_fd;
-  CAN_CaptureBuffer_Clear();
-  capture_running = true;
+  ctx->capture_running = false;
+  if (!CAN_StopHardware(ctx))
+  {
+    return false;
+  }
+
+  ctx->hfdcan->Init.FrameFormat = can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
+  ctx->hfdcan->Init.Mode = FDCAN_MODE_BUS_MONITORING;
+
+  if ((HAL_FDCAN_Init(ctx->hfdcan) != HAL_OK) ||
+      !CAN_ConfigureAndStartHardware(ctx))
+  {
+    return false;
+  }
+
+  ctx->current_can_fd = can_fd;
+  ctx->capture_running = true;
   return true;
 }
 
 void CAN_Sniffer_Reset(void)
 {
-  capture_running = false;
-  if (hardware_started)
+  CAN_Sniffer_ResetChannel(0U);
+}
+
+void CAN_Sniffer_ResetChannel(uint8_t channel)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
+
+  if (ctx == NULL)
   {
-    (void)HAL_FDCAN_Stop(&hfdcan1);
-    hardware_started = false;
+    return;
+  }
+
+  ctx->capture_running = false;
+  (void)CAN_StopHardware(ctx);
+}
+
+void CAN_Sniffer_ResetAll(void)
+{
+  uint8_t channel;
+
+  for (channel = 0U; channel < CAN_SNIFFER_CHANNEL_COUNT; channel++)
+  {
+    CAN_Sniffer_ResetChannel(channel);
   }
   CAN_CaptureBuffer_Clear();
 }
 
 uint32_t CAN_Sniffer_GetBitrate(void)
 {
-  return current_bitrate;
+  return channels[0].current_bitrate;
 }
 
 uint32_t CAN_Sniffer_GetDataBitrate(void)
 {
-  return current_data_bitrate;
+  return channels[0].current_data_bitrate;
 }
 
 uint32_t CAN_Sniffer_GetRxCount(void)
 {
-  /* CPU-load accounting uses the aggregate receive workload of both FDCANs. */
-  return rx_frames + GS_USB_App_GetCAN2RxCount();
+  return channels[0].rx_frames + channels[1].rx_frames;
+}
+
+uint32_t CAN_Sniffer_GetChannelRxCount(uint8_t channel)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
+  return (ctx != NULL) ? ctx->rx_frames : 0U;
+}
+
+uint32_t CAN_Sniffer_GetChannelErrorCount(uint8_t channel)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
+  return (ctx != NULL) ? ctx->read_errors : 0U;
+}
+
+uint32_t CAN_Sniffer_GetChannelFifoLostEvents(uint8_t channel)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
+  return (ctx != NULL) ? ctx->fifo_lost_events : 0U;
+}
+
+uint32_t CAN_Sniffer_GetChannelMaxFifoFill(uint8_t channel)
+{
+  CAN_SnifferChannel *ctx = CAN_GetChannel(channel);
+  return (ctx != NULL) ? ctx->max_fifo_fill : 0U;
 }
 
 uint32_t CAN_Sniffer_GetErrorCount(void)
 {
-  return read_errors;
+  return channels[0].read_errors + channels[1].read_errors;
 }
 
 uint32_t CAN_Sniffer_GetBufferedCount(void)
@@ -463,10 +612,10 @@ uint32_t CAN_Sniffer_GetDroppedCount(void)
 
 uint32_t CAN_Sniffer_GetFifoLostEvents(void)
 {
-  return fifo_lost_events;
+  return channels[0].fifo_lost_events;
 }
 
 uint32_t CAN_Sniffer_GetMaxFifoFill(void)
 {
-  return max_fifo_fill;
+  return channels[0].max_fifo_fill;
 }

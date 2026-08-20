@@ -23,14 +23,16 @@ static uint32_t rx_frames;
 static uint32_t read_errors;
 static uint32_t fifo_lost_events;
 static uint32_t max_fifo_fill;
-static uint32_t current_bitrate = CAN_SNIFFER_BITRATE_500K;
+static uint32_t current_bitrate = CAN_SNIFFER_BITRATE_1M;
+static uint32_t current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
 static bool hardware_started;
 
 static bool CAN_ConfigureAndStartHardware(void)
 {
   /*
    * With zero explicit filters, the global filter routes all standard,
-   * extended and remote frames to FIFO0.
+   * extended and remote frames to FIFO0. FDCAN remains in bus-monitoring
+   * mode, so this analyzer never ACKs or otherwise drives the CAN bus.
    */
   if ((HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
                                     FDCAN_ACCEPT_IN_RX_FIFO0,
@@ -57,11 +59,15 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
 
   if (bitrate == CAN_SNIFFER_BITRATE_250K)
   {
-    prescaler = 2U;
+    prescaler = 20U;
   }
   else if (bitrate == CAN_SNIFFER_BITRATE_500K)
   {
-    prescaler = 1U;
+    prescaler = 10U;
+  }
+  else if (bitrate == CAN_SNIFFER_BITRATE_1M)
+  {
+    prescaler = 5U;
   }
   else
   {
@@ -75,13 +81,16 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
   hardware_started = false;
 
   /*
-   * Both profiles use 16 time quanta and an 87.5% sample point.
-   * The 8 MHz FDCAN kernel clock gives:
-   *   prescaler 1 -> 500 kbit/s
-   *   prescaler 2 -> 250 kbit/s
+   * All convenience profiles use 16 time quanta and an 87.5% sample point.
+   * With the 80 MHz FDCAN kernel clock:
+   *   prescaler 20 -> 250 kbit/s
+   *   prescaler 10 -> 500 kbit/s
+   *   prescaler  5 ->   1 Mbit/s
    */
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   hfdcan1.Init.NominalPrescaler = prescaler;
-  hfdcan1.Init.NominalSyncJumpWidth = 1U;
+  hfdcan1.Init.NominalSyncJumpWidth = 2U;
   hfdcan1.Init.NominalTimeSeg1 = 13U;
   hfdcan1.Init.NominalTimeSeg2 = 2U;
 
@@ -157,10 +166,17 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferFrame *frame)
   frame->dlc = (uint8_t)((word1 & RX_ELEMENT_DLC_MASK) >> 16);
   memset(frame->data, 0, sizeof(frame->data));
 
-  length = CAN_DlcToLength(frame->dlc);
-  if (length > sizeof(frame->data))
+  if ((frame->flags & CAN_FRAME_FLAG_RTR) != 0U)
   {
-    length = sizeof(frame->data);
+    length = 0U;
+  }
+  else if ((frame->flags & CAN_FRAME_FLAG_FD) != 0U)
+  {
+    length = CAN_DlcToLength(frame->dlc);
+  }
+  else
+  {
+    length = (frame->dlc <= 8U) ? frame->dlc : 8U;
   }
 
   for (i = 0U; i < length; i++)
@@ -181,7 +197,8 @@ void CAN_Sniffer_Init(void)
   max_fifo_fill = 0U;
   capture_running = false;
   hardware_started = false;
-  current_bitrate = CAN_SNIFFER_BITRATE_500K;
+  current_bitrate = CAN_SNIFFER_BITRATE_1M;
+  current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
 }
 
 void CAN_Sniffer_Process(void)
@@ -244,7 +261,8 @@ bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
   bool was_running;
 
   if ((bitrate != CAN_SNIFFER_BITRATE_250K) &&
-      (bitrate != CAN_SNIFFER_BITRATE_500K))
+      (bitrate != CAN_SNIFFER_BITRATE_500K) &&
+      (bitrate != CAN_SNIFFER_BITRATE_1M))
   {
     return false;
   }
@@ -267,10 +285,6 @@ bool CAN_Sniffer_SetBitrate(uint32_t bitrate)
     return false;
   }
 
-  /*
-   * Do not mix records captured at two bitrates in one USB stream.
-   * Counters remain cumulative so a failed host keep-up is still visible.
-   */
   CAN_CaptureBuffer_Clear();
   current_bitrate = bitrate;
   if (was_running && !CAN_Sniffer_StartListenOnly())
@@ -307,11 +321,12 @@ bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
   hardware_started = false;
 
   time_seg1 = prop_seg + phase_seg1;
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   hfdcan1.Init.NominalPrescaler = brp;
   hfdcan1.Init.NominalSyncJumpWidth = sjw;
   hfdcan1.Init.NominalTimeSeg1 = time_seg1;
   hfdcan1.Init.NominalTimeSeg2 = phase_seg2;
-  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
 
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
   {
@@ -319,7 +334,52 @@ bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
   }
 
   total_tq = 1U + time_seg1 + phase_seg2;
-  current_bitrate = 8000000UL / (brp * total_tq);
+  current_bitrate = CAN_SNIFFER_FDCAN_CLOCK_HZ / (brp * total_tq);
+  CAN_CaptureBuffer_Clear();
+  return true;
+}
+
+bool CAN_Sniffer_SetDataBitTiming(uint32_t prop_seg,
+                                  uint32_t phase_seg1,
+                                  uint32_t phase_seg2,
+                                  uint32_t sjw,
+                                  uint32_t brp)
+{
+  uint32_t time_seg1;
+  uint32_t total_tq;
+
+  if ((prop_seg > 32U) || (phase_seg1 > 32U) ||
+      ((prop_seg + phase_seg1) < 1U) ||
+      ((prop_seg + phase_seg1) > 32U) ||
+      (phase_seg2 < 1U) || (phase_seg2 > 16U) ||
+      (sjw < 1U) || (sjw > 16U) || (sjw > phase_seg2) ||
+      (brp < 1U) || (brp > 32U))
+  {
+    return false;
+  }
+
+  capture_running = false;
+  if (hardware_started && (HAL_FDCAN_Stop(&hfdcan1) != HAL_OK))
+  {
+    return false;
+  }
+  hardware_started = false;
+
+  time_seg1 = prop_seg + phase_seg1;
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
+  hfdcan1.Init.DataPrescaler = brp;
+  hfdcan1.Init.DataSyncJumpWidth = sjw;
+  hfdcan1.Init.DataTimeSeg1 = time_seg1;
+  hfdcan1.Init.DataTimeSeg2 = phase_seg2;
+
+  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  {
+    return false;
+  }
+
+  total_tq = 1U + time_seg1 + phase_seg2;
+  current_data_bitrate = CAN_SNIFFER_FDCAN_CLOCK_HZ / (brp * total_tq);
   CAN_CaptureBuffer_Clear();
   return true;
 }
@@ -337,6 +397,7 @@ bool CAN_Sniffer_StartListenOnly(void)
     hardware_started = false;
   }
 
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
   hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   if ((HAL_FDCAN_Init(&hfdcan1) != HAL_OK) ||
       !CAN_ConfigureAndStartHardware())
@@ -363,6 +424,11 @@ void CAN_Sniffer_Reset(void)
 uint32_t CAN_Sniffer_GetBitrate(void)
 {
   return current_bitrate;
+}
+
+uint32_t CAN_Sniffer_GetDataBitrate(void)
+{
+  return current_data_bitrate;
 }
 
 uint32_t CAN_Sniffer_GetRxCount(void)

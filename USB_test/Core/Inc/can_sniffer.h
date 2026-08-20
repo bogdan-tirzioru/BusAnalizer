@@ -28,6 +28,7 @@ bool CAN_Sniffer_SetDataBitTiming(uint32_t prop_seg,
                                   uint32_t sjw,
                                   uint32_t brp);
 bool CAN_Sniffer_StartListenOnly(void);
+bool CAN_Sniffer_StartListenOnlyMode(bool can_fd);
 void CAN_Sniffer_Reset(void);
 uint32_t CAN_Sniffer_GetBitrate(void);
 uint32_t CAN_Sniffer_GetDataBitrate(void);

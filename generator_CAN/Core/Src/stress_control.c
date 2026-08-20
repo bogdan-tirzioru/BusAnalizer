@@ -3,22 +3,37 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 extern FDCAN_HandleTypeDef hfdcan1;
 extern UART_HandleTypeDef huart1;
+
+/* Implemented in main.c.  Keep this module independent of main.h so the
+ * HAL_FDCAN_* wrapper macros from stress_control.h do not recurse here. */
+extern HAL_StatusTypeDef Generator_CAN_ApplyConfig(
+        uint8_t can_fd,
+        uint32_t nominal_bitrate,
+        uint32_t data_bitrate);
+extern void Generator_CAN_PrintStatus(void);
 
 #define STRESS_CONTROL_MAX_FPS          4300U
 #define STRESS_CONTROL_DEFAULT_PERCENT  100U
 #define STRESS_CONTROL_CREDIT_SCALE     1000U
 #define STRESS_CONTROL_MAX_CREDIT       (32U * STRESS_CONTROL_CREDIT_SCALE)
+#define STRESS_CONTROL_COMMAND_SIZE     48U
+
+#define CAN_BITRATE_500K  500000UL
+#define CAN_BITRATE_1M   1000000UL
+#define CAN_DBITRATE_2M  2000000UL
+#define CAN_DBITRATE_5M  5000000UL
 
 static uint32_t stress_percent = STRESS_CONTROL_DEFAULT_PERCENT;
 static uint32_t stress_credit = 0U;
 static uint32_t stress_last_tick = 0U;
 static uint8_t stress_initialized = 0U;
 
-static uint16_t command_value = 0U;
-static uint8_t command_digits = 0U;
+static char command_line[STRESS_CONTROL_COMMAND_SIZE];
+static uint8_t command_length = 0U;
 
 static uint32_t StressControl_TargetFps(void)
 {
@@ -32,12 +47,12 @@ static uint32_t StressControl_TargetFps(void)
 
 static void StressControl_SendText(const char *text)
 {
+    uint16_t length = 0U;
+
     if (text == NULL)
     {
         return;
     }
-
-    uint16_t length = 0U;
 
     while ((text[length] != '\0') && (length < 383U))
     {
@@ -68,8 +83,7 @@ static void StressControl_PrintCurrent(void)
         length = snprintf(
             msg,
             sizeof(msg),
-            "STRESS set=100%% mode=MAX (~%lu frame/s)\r\n",
-            (unsigned long)STRESS_CONTROL_MAX_FPS);
+            "STRESS set=100%% mode=MAX\r\n");
     }
     else
     {
@@ -91,6 +105,20 @@ static void StressControl_PrintCurrent(void)
     }
 }
 
+static void StressControl_PrintHelp(void)
+{
+    StressControl_SendText(
+        "Commands:\r\n"
+        "  0..100             stress level\r\n"
+        "  can classic 500k\r\n"
+        "  can classic 1m\r\n"
+        "  can fd 500k 2m\r\n"
+        "  can fd 500k 5m\r\n"
+        "  can fd 1m 2m\r\n"
+        "  can fd 1m 5m\r\n"
+        "  can status\r\n");
+}
+
 static void StressControl_SetLevel(uint32_t percent)
 {
     if (percent > 100U)
@@ -107,58 +135,175 @@ static void StressControl_SetLevel(uint32_t percent)
     StressControl_PrintCurrent();
 }
 
+static uint8_t StressControl_ParsePercent(const char *text, uint32_t *value)
+{
+    uint32_t parsed = 0U;
+    uint32_t i = 0U;
+
+    if ((text == NULL) || (value == NULL) || (text[0] == '\0'))
+    {
+        return 0U;
+    }
+
+    while (text[i] != '\0')
+    {
+        if ((text[i] < '0') || (text[i] > '9'))
+        {
+            return 0U;
+        }
+
+        parsed = (parsed * 10U) + (uint32_t)(text[i] - '0');
+        if (parsed > 100U)
+        {
+            return 0U;
+        }
+        i++;
+    }
+
+    *value = parsed;
+    return 1U;
+}
+
+static void StressControl_ApplyCanCommand(
+        uint8_t can_fd,
+        uint32_t nominal_bitrate,
+        uint32_t data_bitrate)
+{
+    if (Generator_CAN_ApplyConfig(
+            can_fd,
+            nominal_bitrate,
+            data_bitrate) != HAL_OK)
+    {
+        StressControl_SendText("CAN command failed\r\n");
+    }
+}
+
+static void StressControl_HandleCommand(const char *command)
+{
+    uint32_t percent;
+
+    if ((command == NULL) || (command[0] == '\0'))
+    {
+        return;
+    }
+
+    if (StressControl_ParsePercent(command, &percent) != 0U)
+    {
+        StressControl_SetLevel(percent);
+        return;
+    }
+
+    if (strcmp(command, "can classic 500k") == 0)
+    {
+        StressControl_ApplyCanCommand(0U, CAN_BITRATE_500K, 0U);
+        return;
+    }
+
+    if (strcmp(command, "can classic 1m") == 0)
+    {
+        StressControl_ApplyCanCommand(0U, CAN_BITRATE_1M, 0U);
+        return;
+    }
+
+    if (strcmp(command, "can fd 500k 2m") == 0)
+    {
+        StressControl_ApplyCanCommand(
+            1U, CAN_BITRATE_500K, CAN_DBITRATE_2M);
+        return;
+    }
+
+    if (strcmp(command, "can fd 500k 5m") == 0)
+    {
+        StressControl_ApplyCanCommand(
+            1U, CAN_BITRATE_500K, CAN_DBITRATE_5M);
+        return;
+    }
+
+    if (strcmp(command, "can fd 1m 2m") == 0)
+    {
+        StressControl_ApplyCanCommand(
+            1U, CAN_BITRATE_1M, CAN_DBITRATE_2M);
+        return;
+    }
+
+    if (strcmp(command, "can fd 1m 5m") == 0)
+    {
+        StressControl_ApplyCanCommand(
+            1U, CAN_BITRATE_1M, CAN_DBITRATE_5M);
+        return;
+    }
+
+    if (strcmp(command, "can status") == 0)
+    {
+        Generator_CAN_PrintStatus();
+        StressControl_PrintCurrent();
+        return;
+    }
+
+    StressControl_SendText("Unknown command. Type ? for help.\r\n");
+}
+
 static void StressControl_PollConsole(void)
 {
     /*
-     * USART RX is polled directly so changing the stress level never adds a
-     * blocking HAL receive call or another interrupt path to the generator.
+     * USART RX is polled directly so runtime commands do not add a blocking
+     * HAL receive call or another interrupt path to the traffic generator.
      */
     while (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET)
     {
         uint8_t ch = (uint8_t)(huart1.Instance->RDR & 0xFFU);
 
-        if ((ch >= (uint8_t)'0') && (ch <= (uint8_t)'9'))
+        if ((ch == (uint8_t)'\r') || (ch == (uint8_t)'\n'))
         {
-            if (command_digits < 3U)
+            if (command_length != 0U)
             {
-                command_value =
-                    (uint16_t)(command_value * 10U +
-                    (uint16_t)(ch - (uint8_t)'0'));
-                command_digits++;
-            }
-            else
-            {
-                command_value = 101U;
-                command_digits = 4U;
-            }
-        }
-        else if ((ch == (uint8_t)'\r') || (ch == (uint8_t)'\n'))
-        {
-            if (command_digits != 0U)
-            {
-                StressControl_SetLevel((uint32_t)command_value);
-                command_value = 0U;
-                command_digits = 0U;
+                while ((command_length != 0U) &&
+                       (command_line[command_length - 1U] == ' '))
+                {
+                    command_length--;
+                }
+
+                command_line[command_length] = '\0';
+                StressControl_HandleCommand(command_line);
+                command_length = 0U;
             }
         }
-        else if ((ch == (uint8_t)'?') ||
-                 (ch == (uint8_t)'h') ||
-                 (ch == (uint8_t)'H'))
+        else if ((ch == (uint8_t)'?') && (command_length == 0U))
         {
-            command_value = 0U;
-            command_digits = 0U;
-            StressControl_SendText(
-                "STRESS command: type 0..100 then Enter; 0=pause, 100=max\r\n");
+            StressControl_PrintHelp();
         }
         else if ((ch == 0x08U) || (ch == 0x7FU))
         {
-            command_value = 0U;
-            command_digits = 0U;
+            if (command_length != 0U)
+            {
+                command_length--;
+            }
         }
-        else
+        else if ((ch == (uint8_t)' ') || (ch == (uint8_t)'\t'))
         {
-            command_value = 0U;
-            command_digits = 0U;
+            if ((command_length != 0U) &&
+                (command_line[command_length - 1U] != ' ') &&
+                (command_length < (STRESS_CONTROL_COMMAND_SIZE - 1U)))
+            {
+                command_line[command_length++] = ' ';
+            }
+        }
+        else if ((ch >= 0x20U) && (ch <= 0x7EU))
+        {
+            if ((ch >= (uint8_t)'A') && (ch <= (uint8_t)'Z'))
+            {
+                ch = (uint8_t)(ch + ((uint8_t)'a' - (uint8_t)'A'));
+            }
+
+            if (command_length < (STRESS_CONTROL_COMMAND_SIZE - 1U))
+            {
+                command_line[command_length++] = (char)ch;
+            }
+            else
+            {
+                command_length = 0U;
+                StressControl_SendText("Command too long\r\n");
+            }
         }
     }
 
@@ -181,7 +326,7 @@ static void StressControl_Update(void)
         stress_last_tick = HAL_GetTick();
 
         StressControl_SendText(
-            "STRESS control: type 0..100 then Enter; default=100%%\r\n");
+            "Runtime console ready: type ? for commands\r\n");
         StressControl_PrintCurrent();
     }
 
@@ -222,7 +367,9 @@ static void StressControl_Update(void)
 HAL_StatusTypeDef StressControl_FDCAN_Start(
         FDCAN_HandleTypeDef *hfdcan)
 {
-    if (hfdcan == &hfdcan1)
+    /* TDC is required only for the FDCAN1 CAN FD+BRS transmitter. */
+    if ((hfdcan == &hfdcan1) &&
+        (hfdcan->Init.FrameFormat == FDCAN_FRAME_FD_BRS))
     {
         uint32_t tdc_offset =
             hfdcan->Init.DataPrescaler * hfdcan->Init.DataTimeSeg1;

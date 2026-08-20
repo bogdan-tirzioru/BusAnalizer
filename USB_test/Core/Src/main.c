@@ -117,13 +117,17 @@ static void CPU_Load_Init(void)
 
   /*
    * Do not calibrate here.  At boot gs_usb is not yet in the same state as
-   * the normal SocketCAN runtime, and using that faster boot loop as the idle
+   * the normal USB runtime, and using that faster boot loop as the idle
    * reference creates a large false CPU-load offset.
    *
    * The baseline is locked later from a full one-second window only when:
-   *   - USB is configured,
-   *   - SocketCAN has started the CAN sniffer, and
+   *   - USB is configured, and
    *   - no CAN frames were received in the window.
+   *
+   * Requiring CAN_Sniffer_IsRunning() here is intentionally avoided.  Linux
+   * may keep the USB device configured before SocketCAN starts the CAN channel;
+   * that traffic-free period is still the correct runtime baseline for the
+   * polling loop and matches the way the analyzer is actually used.
    */
   cpu_idle_ref_loops = 0U;
   cpu_idle_ref_cycles = 0U;
@@ -134,7 +138,7 @@ static void CPU_Load_Init(void)
   CPU_Load_ResetStats();
   CPU_Load_ResetWindow(CAN_Sniffer_GetRxCount());
 
-  Logger_Write("CPU load: waiting for configured CAN-idle runtime baseline\r\n");
+  Logger_Write("CPU load: waiting for USB-configured CAN-idle runtime baseline\r\n");
 }
 
 static void CPU_Load_Task(void)
@@ -174,13 +178,16 @@ static void CPU_Load_Task(void)
     return;
   }
 
-  runtime_ready = ((hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) &&
-                   CAN_Sniffer_IsRunning()) ? 1U : 0U;
+  /*
+   * USB configuration is the state that materially changes the gs_usb polling
+   * cost.  CAN link-up is deliberately not required for the idle reference.
+   */
+  runtime_ready = (hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) ? 1U : 0U;
 
   /*
-   * A USB disconnect or SocketCAN link-down changes the cost of the polling
-   * loop.  Throw the reference away and reacquire it after link-up instead of
-   * comparing two different runtime states.
+   * A USB disconnect changes the cost of the polling loop. Throw the reference
+   * away and reacquire it after USB is configured again instead of comparing
+   * two different runtime states.
    */
   if (runtime_ready == 0U)
   {
@@ -192,9 +199,9 @@ static void CPU_Load_Task(void)
   }
 
   /*
-   * A configured, running, traffic-free window is the correct idle reference.
-   * Once locked, only a faster traffic-free window may improve the reference.
-   * This removes the old ~56%% false idle load caused by boot-time calibration.
+   * A USB-configured, traffic-free window is the idle reference. Once locked,
+   * any faster traffic-free window may improve the reference. This removes the
+   * old boot-time false load while allowing calibration before candump starts.
    */
   if ((rx_delta == 0U) && (cpu_window_loops != 0U))
   {

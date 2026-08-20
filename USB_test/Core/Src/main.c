@@ -35,7 +35,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define CPU_LOAD_CALIBRATION_MS 500U
 #define CPU_LOAD_WINDOW_MS      1000U
 #define CPU_LOAD_REPORT_WINDOWS 5U
 #define CPU_LOAD_POLL_DIVIDER   16384U
@@ -53,6 +52,8 @@ FDCAN_HandleTypeDef hfdcan1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+extern USBD_HandleTypeDef hUsbDeviceHS;
+
 static uint32_t cpu_idle_ref_loops;
 static uint32_t cpu_idle_ref_cycles;
 static uint32_t cpu_window_start_cycles;
@@ -64,7 +65,9 @@ static uint32_t cpu_load_sum_permille;
 static uint32_t cpu_load_max_permille;
 static uint32_t cpu_rx_sum;
 static uint32_t cpu_load_samples;
+static uint32_t cpu_wait_windows;
 static uint8_t cpu_load_ready;
+static uint8_t cpu_baseline_valid;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,19 +79,30 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 static void CPU_Load_Init(void);
 static void CPU_Load_Task(void);
+static void CPU_Load_ResetWindow(uint32_t frames);
+static void CPU_Load_ResetStats(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void CPU_Load_ResetWindow(uint32_t frames)
+{
+  cpu_window_loops = 0U;
+  cpu_last_rx_frames = frames;
+  cpu_window_start_ms = HAL_GetTick();
+  cpu_window_start_cycles = DWT->CYCCNT;
+}
+
+static void CPU_Load_ResetStats(void)
+{
+  cpu_load_sum_permille = 0U;
+  cpu_load_max_permille = 0U;
+  cpu_rx_sum = 0U;
+  cpu_load_samples = 0U;
+}
+
 static void CPU_Load_Init(void)
 {
-  uint32_t start_ms;
-  uint32_t start_cycles;
-  uint32_t elapsed_cycles;
-  uint32_t loops = 0U;
-  uint32_t poll_divider = 0U;
-  uint32_t idle_loops_per_second;
-
   /* Enable the Cortex-M7 DWT cycle counter. */
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   DWT->CYCCNT = 0U;
@@ -102,60 +116,25 @@ static void CPU_Load_Init(void)
   }
 
   /*
-   * Establish an idle-loop reference using exactly the same two polling
-   * functions as the normal main loop. FDCAN capture is normally stopped at
-   * this point, so this measures the loop capacity available before CAN load.
-   * The reference can later improve automatically during a traffic-free
-   * one-second window.
+   * Do not calibrate here.  At boot gs_usb is not yet in the same state as
+   * the normal SocketCAN runtime, and using that faster boot loop as the idle
+   * reference creates a large false CPU-load offset.
+   *
+   * The baseline is locked later from a full one-second window only when:
+   *   - USB is configured,
+   *   - SocketCAN has started the CAN sniffer, and
+   *   - no CAN frames were received in the window.
    */
-  start_ms = HAL_GetTick();
-  start_cycles = DWT->CYCCNT;
-  for (;;)
-  {
-    CAN_Sniffer_Process();
-    GS_USB_App_Task();
-    loops++;
-
-    poll_divider++;
-    if (poll_divider >= CPU_LOAD_POLL_DIVIDER)
-    {
-      poll_divider = 0U;
-      if ((uint32_t)(HAL_GetTick() - start_ms) >= CPU_LOAD_CALIBRATION_MS)
-      {
-        break;
-      }
-    }
-  }
-
-  elapsed_cycles = DWT->CYCCNT - start_cycles;
-  if ((loops == 0U) || (elapsed_cycles == 0U))
-  {
-    cpu_load_ready = 0U;
-    Logger_Write("CPU load measurement unavailable: invalid idle reference\r\n");
-    return;
-  }
-
-  cpu_idle_ref_loops = loops;
-  cpu_idle_ref_cycles = elapsed_cycles;
-  cpu_window_loops = 0U;
+  cpu_idle_ref_loops = 0U;
+  cpu_idle_ref_cycles = 0U;
   cpu_task_poll_divider = 0U;
-  cpu_load_sum_permille = 0U;
-  cpu_load_max_permille = 0U;
-  cpu_rx_sum = 0U;
-  cpu_load_samples = 0U;
+  cpu_wait_windows = 0U;
+  cpu_baseline_valid = 0U;
   cpu_load_ready = 1U;
+  CPU_Load_ResetStats();
+  CPU_Load_ResetWindow(CAN_Sniffer_GetRxCount());
 
-  idle_loops_per_second = (uint32_t)(((uint64_t)cpu_idle_ref_loops *
-                                      (uint64_t)HAL_RCC_GetSysClockFreq()) /
-                                     cpu_idle_ref_cycles);
-  Logger_Printf("CPU load baseline: %lu loops/s over %lu ms\r\n",
-                (unsigned long)idle_loops_per_second,
-                (unsigned long)(HAL_GetTick() - start_ms));
-
-  /* Start the first measurement window after the calibration log output. */
-  cpu_last_rx_frames = CAN_Sniffer_GetRxCount();
-  cpu_window_start_ms = HAL_GetTick();
-  cpu_window_start_cycles = DWT->CYCCNT;
+  Logger_Write("CPU load: waiting for configured CAN-idle runtime baseline\r\n");
 }
 
 static void CPU_Load_Task(void)
@@ -170,6 +149,8 @@ static void CPU_Load_Task(void)
   uint32_t loops_per_second;
   uint32_t idle_loops_per_second;
   uint64_t expected_idle_loops;
+  uint8_t runtime_ready;
+  uint8_t baseline_was_valid;
 
   if (cpu_load_ready == 0U)
   {
@@ -189,24 +170,71 @@ static void CPU_Load_Task(void)
 
   if (elapsed_cycles == 0U)
   {
-    cpu_window_loops = 0U;
-    cpu_last_rx_frames = frames;
-    cpu_window_start_ms = now_ms;
-    cpu_window_start_cycles = now_cycles;
+    CPU_Load_ResetWindow(frames);
+    return;
+  }
+
+  runtime_ready = ((hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) &&
+                   CAN_Sniffer_IsRunning()) ? 1U : 0U;
+
+  /*
+   * A USB disconnect or SocketCAN link-down changes the cost of the polling
+   * loop.  Throw the reference away and reacquire it after link-up instead of
+   * comparing two different runtime states.
+   */
+  if (runtime_ready == 0U)
+  {
+    cpu_baseline_valid = 0U;
+    cpu_wait_windows = 0U;
+    CPU_Load_ResetStats();
+    CPU_Load_ResetWindow(frames);
     return;
   }
 
   /*
-   * A traffic-free interval is allowed to improve the idle reference. Using
-   * the fastest observed idle ratio prevents USB enumeration or a one-off
-   * interrupt burst during boot from making the reference artificially slow.
+   * A configured, running, traffic-free window is the correct idle reference.
+   * Once locked, only a faster traffic-free window may improve the reference.
+   * This removes the old ~56%% false idle load caused by boot-time calibration.
    */
-  if ((rx_delta == 0U) && (cpu_window_loops != 0U) &&
-      (((uint64_t)cpu_window_loops * cpu_idle_ref_cycles) >
-       ((uint64_t)cpu_idle_ref_loops * elapsed_cycles)))
+  if ((rx_delta == 0U) && (cpu_window_loops != 0U))
   {
-    cpu_idle_ref_loops = cpu_window_loops;
-    cpu_idle_ref_cycles = elapsed_cycles;
+    baseline_was_valid = cpu_baseline_valid;
+
+    if ((cpu_baseline_valid == 0U) ||
+        (((uint64_t)cpu_window_loops * cpu_idle_ref_cycles) >
+         ((uint64_t)cpu_idle_ref_loops * elapsed_cycles)))
+    {
+      cpu_idle_ref_loops = cpu_window_loops;
+      cpu_idle_ref_cycles = elapsed_cycles;
+      cpu_baseline_valid = 1U;
+    }
+
+    if ((baseline_was_valid == 0U) && (cpu_baseline_valid != 0U))
+    {
+      idle_loops_per_second =
+          (uint32_t)(((uint64_t)cpu_idle_ref_loops *
+                      (uint64_t)HAL_RCC_GetSysClockFreq()) /
+                     cpu_idle_ref_cycles);
+      Logger_Printf("CPU load baseline locked: %lu loops/s (USB configured, CAN idle)\r\n",
+                    (unsigned long)idle_loops_per_second);
+      CPU_Load_ResetStats();
+      cpu_wait_windows = 0U;
+      /* Exclude the diagnostic UART transmission from the next window. */
+      CPU_Load_ResetWindow(frames);
+      return;
+    }
+  }
+
+  if (cpu_baseline_valid == 0U)
+  {
+    cpu_wait_windows++;
+    if (cpu_wait_windows >= CPU_LOAD_REPORT_WINDOWS)
+    {
+      Logger_Write("CPU load: no idle baseline yet; leave CAN traffic idle for 1 s\r\n");
+      cpu_wait_windows = 0U;
+    }
+    CPU_Load_ResetWindow(frames);
+    return;
   }
 
   expected_idle_loops = ((uint64_t)cpu_idle_ref_loops * elapsed_cycles) /
@@ -237,17 +265,14 @@ static void CPU_Load_Task(void)
   cpu_rx_sum += rx_delta;
   cpu_load_samples++;
 
-  loops_per_second = (uint32_t)(((uint64_t)cpu_window_loops *
-                                 (uint64_t)HAL_RCC_GetSysClockFreq()) /
-                                elapsed_cycles);
-  idle_loops_per_second = (uint32_t)(((uint64_t)cpu_idle_ref_loops *
-                                      (uint64_t)HAL_RCC_GetSysClockFreq()) /
-                                     cpu_idle_ref_cycles);
-
-  cpu_window_loops = 0U;
-  cpu_last_rx_frames = frames;
-  cpu_window_start_ms = now_ms;
-  cpu_window_start_cycles = now_cycles;
+  loops_per_second =
+      (uint32_t)(((uint64_t)cpu_window_loops *
+                  (uint64_t)HAL_RCC_GetSysClockFreq()) /
+                 elapsed_cycles);
+  idle_loops_per_second =
+      (uint32_t)(((uint64_t)cpu_idle_ref_loops *
+                  (uint64_t)HAL_RCC_GetSysClockFreq()) /
+                 cpu_idle_ref_cycles);
 
   if (cpu_load_samples >= CPU_LOAD_REPORT_WINDOWS)
   {
@@ -261,11 +286,13 @@ static void CPU_Load_Task(void)
                   (unsigned long)idle_loops_per_second,
                   (unsigned long)(cpu_rx_sum / cpu_load_samples));
 
-    cpu_load_sum_permille = 0U;
-    cpu_load_max_permille = 0U;
-    cpu_rx_sum = 0U;
-    cpu_load_samples = 0U;
+    CPU_Load_ResetStats();
+    /* Exclude CPU-load diagnostic UART time from the next measurement. */
+    CPU_Load_ResetWindow(frames);
+    return;
   }
+
+  CPU_Load_ResetWindow(frames);
 }
 /* USER CODE END 0 */
 

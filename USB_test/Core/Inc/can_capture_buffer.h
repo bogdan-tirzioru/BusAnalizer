@@ -12,7 +12,7 @@ typedef struct
   uint16_t timestamp;
   uint8_t dlc;
   uint8_t flags;
-  uint8_t data[8];
+  uint8_t data[64];
 } CAN_SnifferFrame;
 
 enum

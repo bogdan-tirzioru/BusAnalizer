@@ -219,6 +219,31 @@ static void StressControl_Update(void)
     }
 }
 
+HAL_StatusTypeDef StressControl_FDCAN_Start(
+        FDCAN_HandleTypeDef *hfdcan)
+{
+    if (hfdcan == &hfdcan1)
+    {
+        uint32_t tdc_offset =
+            hfdcan->Init.DataPrescaler * hfdcan->Init.DataTimeSeg1;
+
+        if (HAL_FDCAN_ConfigTxDelayCompensation(
+                hfdcan,
+                tdc_offset,
+                0U) != HAL_OK)
+        {
+            return HAL_ERROR;
+        }
+
+        if (HAL_FDCAN_EnableTxDelayCompensation(hfdcan) != HAL_OK)
+        {
+            return HAL_ERROR;
+        }
+    }
+
+    return HAL_FDCAN_Start(hfdcan);
+}
+
 uint32_t StressControl_GetLevelPercent(void)
 {
     return stress_percent;

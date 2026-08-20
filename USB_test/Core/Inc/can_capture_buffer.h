@@ -17,11 +17,12 @@ typedef struct
 
 enum
 {
-  CAN_FRAME_FLAG_EXTENDED = (1U << 0),
-  CAN_FRAME_FLAG_RTR      = (1U << 1),
-  CAN_FRAME_FLAG_FD       = (1U << 2),
-  CAN_FRAME_FLAG_BRS      = (1U << 3),
-  CAN_FRAME_FLAG_ESI      = (1U << 4)
+  CAN_FRAME_FLAG_EXTENDED  = (1U << 0),
+  CAN_FRAME_FLAG_RTR       = (1U << 1),
+  CAN_FRAME_FLAG_FD        = (1U << 2),
+  CAN_FRAME_FLAG_BRS       = (1U << 3),
+  CAN_FRAME_FLAG_ESI       = (1U << 4),
+  CAN_FRAME_FLAG_CHANNEL_1 = (1U << 5)
 };
 
 void CAN_CaptureBuffer_Init(void);

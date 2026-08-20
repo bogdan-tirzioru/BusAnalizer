@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-_Static_assert(sizeof(CAN_SnifferFrame) == 16U,
-               "CAN_SnifferFrame must remain a compact 16-byte record");
+_Static_assert(sizeof(CAN_SnifferFrame) == 72U,
+               "CAN_SnifferFrame CAN FD ABI mismatch");
 
 static CAN_SnifferFrame capture_buffer[CAN_CAPTURE_CAPACITY];
 static volatile uint32_t write_sequence;

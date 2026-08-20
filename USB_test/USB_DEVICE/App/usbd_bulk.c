@@ -15,6 +15,7 @@ typedef struct
   uint32_t tx_length;
   volatile uint8_t tx_busy;
   uint8_t pending_request;
+  uint8_t pending_channel;
   uint8_t pending_valid;
   uint16_t pending_length;
 } USBD_GS_USB_HandleTypeDef;
@@ -135,7 +136,7 @@ static uint8_t USBD_GS_USB_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 static uint8_t USBD_GS_USB_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
   UNUSED(cfgidx);
-  CAN_Sniffer_Reset();
+  CAN_Sniffer_ResetAll();
 
   (void)USBD_LL_CloseEP(pdev, GS_USB_IN_EP);
   pdev->ep_in[GS_USB_IN_EP & 0x0FU].is_used = 0U;
@@ -151,7 +152,8 @@ static uint8_t USBD_GS_USB_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 static uint8_t GS_USB_SendDeviceConfig(USBD_HandleTypeDef *pdev,
                                        uint16_t requested)
 {
-  GS_USB_DeviceConfig config = {{0U, 0U, 0U}, 0U, 2U, 1U};
+  GS_USB_DeviceConfig config =
+      {{0U, 0U, 0U}, CAN_SNIFFER_CHANNEL_COUNT - 1U, 2U, 1U};
   uint16_t length = (requested < sizeof(config)) ? requested : sizeof(config);
 
   (void)memcpy(gs_ctrl_buffer, &config, sizeof(config));
@@ -207,6 +209,8 @@ static uint8_t USBD_GS_USB_Setup(USBD_HandleTypeDef *pdev,
 {
   uint8_t alternate_setting = 0U;
   uint16_t status = 0U;
+  uint8_t channel_valid =
+      (req->wValue < CAN_SNIFFER_CHANNEL_COUNT) ? 1U : 0U;
 
   if ((req->bmRequest & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_VENDOR)
   {
@@ -223,11 +227,11 @@ static uint8_t USBD_GS_USB_Setup(USBD_HandleTypeDef *pdev,
       {
         return GS_USB_SendDeviceConfig(pdev, req->wLength);
       }
-      if ((req->bRequest == GS_USB_BREQ_BT_CONST) && (req->wValue == 0U))
+      if ((req->bRequest == GS_USB_BREQ_BT_CONST) && (channel_valid != 0U))
       {
         return GS_USB_SendBitTimingConst(pdev, req->wLength);
       }
-      if ((req->bRequest == GS_USB_BREQ_BT_CONST_EXT) && (req->wValue == 0U))
+      if ((req->bRequest == GS_USB_BREQ_BT_CONST_EXT) && (channel_valid != 0U))
       {
         return GS_USB_SendBitTimingConstExtended(pdev, req->wLength);
       }
@@ -236,16 +240,18 @@ static uint8_t USBD_GS_USB_Setup(USBD_HandleTypeDef *pdev,
               (req->wValue == 1U) &&
               (req->wLength == sizeof(GS_USB_HostConfig))) ||
              ((req->bRequest == GS_USB_BREQ_BITTIMING) &&
-              (req->wValue == 0U) &&
+              (channel_valid != 0U) &&
               (req->wLength == sizeof(GS_USB_BitTiming))) ||
              ((req->bRequest == GS_USB_BREQ_DATA_BITTIMING) &&
-              (req->wValue == 0U) &&
+              (channel_valid != 0U) &&
               (req->wLength == sizeof(GS_USB_BitTiming))) ||
              ((req->bRequest == GS_USB_BREQ_MODE) &&
-              (req->wValue == 0U) &&
+              (channel_valid != 0U) &&
               (req->wLength == sizeof(GS_USB_Mode))))
     {
       gs_handle.pending_request = req->bRequest;
+      gs_handle.pending_channel =
+          (req->bRequest == GS_USB_BREQ_HOST_FORMAT) ? 0U : (uint8_t)req->wValue;
       gs_handle.pending_length = req->wLength;
       gs_handle.pending_valid = 1U;
       return (uint8_t)USBD_CtlPrepareRx(pdev, gs_ctrl_buffer, req->wLength);
@@ -283,6 +289,7 @@ static uint8_t USBD_GS_USB_Setup(USBD_HandleTypeDef *pdev,
 static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
 {
   uint8_t request;
+  uint8_t channel;
 
   UNUSED(pdev);
   if (gs_handle.pending_valid == 0U)
@@ -291,6 +298,7 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
   }
 
   request = gs_handle.pending_request;
+  channel = gs_handle.pending_channel;
   gs_handle.pending_valid = 0U;
 
   if (request == GS_USB_BREQ_HOST_FORMAT)
@@ -305,11 +313,12 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
   {
     GS_USB_BitTiming timing;
     (void)memcpy(&timing, gs_ctrl_buffer, sizeof(timing));
-    return CAN_Sniffer_SetBitTiming(timing.prop_seg,
-                                    timing.phase_seg1,
-                                    timing.phase_seg2,
-                                    timing.sjw,
-                                    timing.brp) ?
+    return CAN_Sniffer_SetBitTimingChannel(channel,
+                                           timing.prop_seg,
+                                           timing.phase_seg1,
+                                           timing.phase_seg2,
+                                           timing.sjw,
+                                           timing.brp) ?
            (uint8_t)USBD_OK : (uint8_t)USBD_FAIL;
   }
 
@@ -317,11 +326,12 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
   {
     GS_USB_BitTiming timing;
     (void)memcpy(&timing, gs_ctrl_buffer, sizeof(timing));
-    return CAN_Sniffer_SetDataBitTiming(timing.prop_seg,
-                                        timing.phase_seg1,
-                                        timing.phase_seg2,
-                                        timing.sjw,
-                                        timing.brp) ?
+    return CAN_Sniffer_SetDataBitTimingChannel(channel,
+                                               timing.prop_seg,
+                                               timing.phase_seg1,
+                                               timing.phase_seg2,
+                                               timing.sjw,
+                                               timing.brp) ?
            (uint8_t)USBD_OK : (uint8_t)USBD_FAIL;
   }
 
@@ -332,14 +342,14 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
 
     if (mode.mode == GS_CAN_MODE_RESET)
     {
-      CAN_Sniffer_Reset();
+      CAN_Sniffer_ResetChannel(channel);
       return (uint8_t)USBD_OK;
     }
     if ((mode.mode == GS_CAN_MODE_START) &&
         ((mode.flags & GS_CAN_MODE_LISTEN_ONLY) != 0U))
     {
-      return CAN_Sniffer_StartListenOnlyMode(
-                 (mode.flags & GS_CAN_MODE_FD) != 0U) ?
+      return CAN_Sniffer_StartListenOnlyModeChannel(
+                 channel, (mode.flags & GS_CAN_MODE_FD) != 0U) ?
              (uint8_t)USBD_OK : (uint8_t)USBD_FAIL;
     }
   }

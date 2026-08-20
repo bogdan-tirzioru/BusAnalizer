@@ -35,11 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define CPU_LOAD_WINDOW_MS             1000U
-#define CPU_LOAD_REPORT_WINDOWS        5U
-#define CPU_LOAD_POLL_DIVIDER          16384U
-#define CPU_IDLE_STABLE_WINDOWS        3U
-#define CPU_IDLE_STABILITY_PERMILLE    30U
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,24 +51,7 @@ FDCAN_HandleTypeDef hfdcan2;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-extern USBD_HandleTypeDef hUsbDeviceHS;
 
-static uint32_t cpu_idle_ref_loops_per_second;
-static uint32_t cpu_window_start_cycles;
-static uint32_t cpu_window_start_ms;
-static uint32_t cpu_window_loops;
-static uint32_t cpu_task_poll_divider;
-static uint32_t cpu_last_rx_frames;
-static uint32_t cpu_load_sum_permille;
-static uint32_t cpu_load_max_permille;
-static uint64_t cpu_rx_frames_sum;
-static uint64_t cpu_elapsed_cycles_sum;
-static uint32_t cpu_load_samples;
-static uint32_t cpu_wait_windows;
-static uint64_t cpu_idle_candidate_sum_lps;
-static uint32_t cpu_idle_candidate_samples;
-static uint8_t cpu_load_ready;
-static uint8_t cpu_baseline_valid;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,271 +63,12 @@ static void MX_FDCAN1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_FDCAN2_Init(void);
 /* USER CODE BEGIN PFP */
-static void CPU_Load_Init(void);
-static void CPU_Load_Task(void);
-static void CPU_Load_ResetWindow(uint32_t frames);
-static void CPU_Load_ResetStats(void);
-static void CPU_Load_ResetIdleCandidate(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void CPU_Load_ResetWindow(uint32_t frames)
-{
-  cpu_window_loops = 0U;
-  cpu_last_rx_frames = frames;
-  cpu_window_start_ms = HAL_GetTick();
-  cpu_window_start_cycles = DWT->CYCCNT;
-}
 
-static void CPU_Load_ResetStats(void)
-{
-  cpu_load_sum_permille = 0U;
-  cpu_load_max_permille = 0U;
-  cpu_rx_frames_sum = 0U;
-  cpu_elapsed_cycles_sum = 0U;
-  cpu_load_samples = 0U;
-}
-
-static void CPU_Load_ResetIdleCandidate(void)
-{
-  cpu_idle_candidate_sum_lps = 0U;
-  cpu_idle_candidate_samples = 0U;
-}
-
-static void CPU_Load_Init(void)
-{
-  /* Enable the Cortex-M7 DWT cycle counter. */
-  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-  DWT->CYCCNT = 0U;
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-
-  if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0U)
-  {
-    cpu_load_ready = 0U;
-    Logger_Write("CPU load measurement unavailable: DWT CYCCNT disabled\r\n");
-    return;
-  }
-
-  /*
-   * Do not calibrate at boot. USB configuration and SocketCAN setup change the
-   * cost of the polling loop. A valid idle reference therefore requires three
-   * consecutive USB-configured, zero-CAN windows whose loop rates agree within
-   * 3 percent. This rejects short configuration transients such as the faster
-   * first idle window observed immediately after enumeration.
-   */
-  cpu_idle_ref_loops_per_second = 0U;
-  cpu_task_poll_divider = 0U;
-  cpu_wait_windows = 0U;
-  cpu_baseline_valid = 0U;
-  cpu_load_ready = 1U;
-  CPU_Load_ResetStats();
-  CPU_Load_ResetIdleCandidate();
-  CPU_Load_ResetWindow(CAN_Sniffer_GetRxCount());
-
-  Logger_Write("CPU load: waiting for 3 stable USB-configured CAN-idle windows\r\n");
-}
-
-static void CPU_Load_Task(void)
-{
-  uint32_t now_ms;
-  uint32_t now_cycles;
-  uint32_t elapsed_cycles;
-  uint32_t frames;
-  uint32_t rx_delta;
-  uint32_t core_hz;
-  uint32_t loops_per_second;
-  uint32_t load_permille;
-  uint32_t avg_permille;
-  uint32_t avg_can_fps;
-  uint32_t candidate_avg;
-  uint32_t candidate_diff;
-  uint32_t candidate_limit;
-  uint32_t new_idle_ref;
-  uint32_t ref_diff;
-  uint32_t ref_limit;
-  uint8_t baseline_was_valid;
-
-  if (cpu_load_ready == 0U)
-  {
-    return;
-  }
-
-  now_ms = HAL_GetTick();
-  if ((uint32_t)(now_ms - cpu_window_start_ms) < CPU_LOAD_WINDOW_MS)
-  {
-    return;
-  }
-
-  now_cycles = DWT->CYCCNT;
-  elapsed_cycles = now_cycles - cpu_window_start_cycles;
-  frames = CAN_Sniffer_GetRxCount();
-  rx_delta = frames - cpu_last_rx_frames;
-
-  if (elapsed_cycles == 0U)
-  {
-    CPU_Load_ResetWindow(frames);
-    return;
-  }
-
-  core_hz = HAL_RCC_GetSysClockFreq();
-  loops_per_second =
-      (uint32_t)(((uint64_t)cpu_window_loops * (uint64_t)core_hz) /
-                 elapsed_cycles);
-
-  /* USB disconnect changes the polling cost. Reacquire the idle reference. */
-  if (hUsbDeviceHS.dev_state != USBD_STATE_CONFIGURED)
-  {
-    cpu_baseline_valid = 0U;
-    cpu_idle_ref_loops_per_second = 0U;
-    cpu_wait_windows = 0U;
-    CPU_Load_ResetStats();
-    CPU_Load_ResetIdleCandidate();
-    CPU_Load_ResetWindow(frames);
-    return;
-  }
-
-  if ((rx_delta == 0U) && (cpu_window_loops != 0U))
-  {
-    /*
-     * Build an idle candidate from consecutive zero-traffic windows. A window
-     * must be within 3% of the running candidate average. If not, the transient
-     * candidate is discarded and stability counting restarts from this window.
-     */
-    if (cpu_idle_candidate_samples == 0U)
-    {
-      cpu_idle_candidate_sum_lps = loops_per_second;
-      cpu_idle_candidate_samples = 1U;
-    }
-    else
-    {
-      candidate_avg =
-          (uint32_t)(cpu_idle_candidate_sum_lps / cpu_idle_candidate_samples);
-      candidate_diff = (loops_per_second > candidate_avg) ?
-                       (loops_per_second - candidate_avg) :
-                       (candidate_avg - loops_per_second);
-      candidate_limit =
-          (uint32_t)(((uint64_t)candidate_avg * CPU_IDLE_STABILITY_PERMILLE) /
-                     1000U);
-
-      if (candidate_diff <= candidate_limit)
-      {
-        cpu_idle_candidate_sum_lps += loops_per_second;
-        cpu_idle_candidate_samples++;
-      }
-      else
-      {
-        cpu_idle_candidate_sum_lps = loops_per_second;
-        cpu_idle_candidate_samples = 1U;
-      }
-    }
-
-    if (cpu_idle_candidate_samples >= CPU_IDLE_STABLE_WINDOWS)
-    {
-      new_idle_ref =
-          (uint32_t)(cpu_idle_candidate_sum_lps / cpu_idle_candidate_samples);
-      baseline_was_valid = cpu_baseline_valid;
-
-      if (cpu_baseline_valid == 0U)
-      {
-        cpu_idle_ref_loops_per_second = new_idle_ref;
-        cpu_baseline_valid = 1U;
-      }
-      else
-      {
-        ref_diff = (new_idle_ref > cpu_idle_ref_loops_per_second) ?
-                   (new_idle_ref - cpu_idle_ref_loops_per_second) :
-                   (cpu_idle_ref_loops_per_second - new_idle_ref);
-        ref_limit =
-            (uint32_t)(((uint64_t)cpu_idle_ref_loops_per_second *
-                        CPU_IDLE_STABILITY_PERMILLE) / 1000U);
-        if (ref_diff > ref_limit)
-        {
-          cpu_idle_ref_loops_per_second = new_idle_ref;
-        }
-      }
-
-      CPU_Load_ResetIdleCandidate();
-
-      if (baseline_was_valid == 0U)
-      {
-        Logger_Printf("CPU load baseline locked: %lu loops/s (3 stable idle windows)\r\n",
-                      (unsigned long)cpu_idle_ref_loops_per_second);
-        CPU_Load_ResetStats();
-        cpu_wait_windows = 0U;
-        /* Exclude the diagnostic UART transmission from the next window. */
-        CPU_Load_ResetWindow(frames);
-        return;
-      }
-    }
-  }
-  else
-  {
-    /* Any received traffic breaks the consecutive-idle stability sequence. */
-    CPU_Load_ResetIdleCandidate();
-  }
-
-  if (cpu_baseline_valid == 0U)
-  {
-    cpu_wait_windows++;
-    if (cpu_wait_windows >= CPU_LOAD_REPORT_WINDOWS)
-    {
-      Logger_Write("CPU load: no stable idle baseline yet; leave CAN traffic idle\r\n");
-      cpu_wait_windows = 0U;
-    }
-    CPU_Load_ResetWindow(frames);
-    return;
-  }
-
-  if (loops_per_second >= cpu_idle_ref_loops_per_second)
-  {
-    load_permille = 0U;
-  }
-  else
-  {
-    load_permille = 1000U -
-                    (uint32_t)(((uint64_t)loops_per_second * 1000U) /
-                               cpu_idle_ref_loops_per_second);
-  }
-
-  if (load_permille > 1000U)
-  {
-    load_permille = 1000U;
-  }
-
-  cpu_load_sum_permille += load_permille;
-  if (load_permille > cpu_load_max_permille)
-  {
-    cpu_load_max_permille = load_permille;
-  }
-  cpu_rx_frames_sum += rx_delta;
-  cpu_elapsed_cycles_sum += elapsed_cycles;
-  cpu_load_samples++;
-
-  if (cpu_load_samples >= CPU_LOAD_REPORT_WINDOWS)
-  {
-    avg_permille = cpu_load_sum_permille / cpu_load_samples;
-    avg_can_fps = (cpu_elapsed_cycles_sum != 0U) ?
-        (uint32_t)((cpu_rx_frames_sum * (uint64_t)core_hz) /
-                   cpu_elapsed_cycles_sum) : 0U;
-
-    Logger_Printf("CPU load: avg=%lu.%lu%% max=%lu.%lu%% loops=%lu/s idle=%lu/s CAN=%lu fps\r\n",
-                  (unsigned long)(avg_permille / 10U),
-                  (unsigned long)(avg_permille % 10U),
-                  (unsigned long)(cpu_load_max_permille / 10U),
-                  (unsigned long)(cpu_load_max_permille % 10U),
-                  (unsigned long)loops_per_second,
-                  (unsigned long)cpu_idle_ref_loops_per_second,
-                  (unsigned long)avg_can_fps);
-
-    CPU_Load_ResetStats();
-    /* Exclude CPU-load diagnostic UART time from the next measurement. */
-    CPU_Load_ResetWindow(frames);
-    return;
-  }
-
-  CPU_Load_ResetWindow(frames);
-}
 /* USER CODE END 0 */
 
 /**
@@ -394,7 +114,6 @@ int main(void)
   CAN_Sniffer_Init();
   GS_USB_App_Init();
   Logger_Write("CAN1 passive sniffer ready: USB gs_usb / SocketCAN\r\n");
-  CPU_Load_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -407,16 +126,6 @@ int main(void)
     CAN_Sniffer_Process();
     GS_USB_App_Task();
 
-    if (cpu_load_ready != 0U)
-    {
-      cpu_window_loops++;
-      cpu_task_poll_divider++;
-      if (cpu_task_poll_divider >= CPU_LOAD_POLL_DIVIDER)
-      {
-        cpu_task_poll_divider = 0U;
-        CPU_Load_Task();
-      }
-    }
   }
   /* USER CODE END 3 */
 }

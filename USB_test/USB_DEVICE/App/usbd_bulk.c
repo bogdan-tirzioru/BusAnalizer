@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#define GS_USB_CTRL_BUFFER_SIZE 40U
+#define GS_USB_CTRL_BUFFER_SIZE 72U
 #define GS_USB_DIR_IN           0x80U
 
 typedef struct
@@ -41,8 +41,10 @@ _Static_assert(sizeof(GS_USB_BitTiming) == 20U,
                "gs_usb bit timing ABI mismatch");
 _Static_assert(sizeof(GS_USB_BitTimingConst) == 40U,
                "gs_usb bit timing constants ABI mismatch");
-_Static_assert(sizeof(GS_USB_HostFrame) == GS_USB_HOST_FRAME_SIZE,
-               "gs_usb classic CAN frame ABI mismatch");
+_Static_assert(sizeof(GS_USB_BitTimingConstExtended) == 72U,
+               "gs_usb extended bit timing constants ABI mismatch");
+_Static_assert(sizeof(GS_USB_HostFrame) == GS_USB_FD_HOST_FRAME_SIZE,
+               "gs_usb CAN FD frame ABI mismatch");
 
 USBD_ClassTypeDef USBD_GS_USB =
 {
@@ -149,7 +151,7 @@ static uint8_t USBD_GS_USB_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 static uint8_t GS_USB_SendDeviceConfig(USBD_HandleTypeDef *pdev,
                                        uint16_t requested)
 {
-  GS_USB_DeviceConfig config = {{0U, 0U, 0U}, 0U, 1U, 1U};
+  GS_USB_DeviceConfig config = {{0U, 0U, 0U}, 0U, 2U, 1U};
   uint16_t length = (requested < sizeof(config)) ? requested : sizeof(config);
 
   (void)memcpy(gs_ctrl_buffer, &config, sizeof(config));
@@ -161,12 +163,38 @@ static uint8_t GS_USB_SendBitTimingConst(USBD_HandleTypeDef *pdev,
 {
   GS_USB_BitTimingConst constants =
   {
-    GS_CAN_FEATURE_LISTEN_ONLY,
-    8000000UL,
+    GS_CAN_FEATURE_LISTEN_ONLY |
+    GS_CAN_FEATURE_FD |
+    GS_CAN_FEATURE_BT_CONST_EXT,
+    CAN_SNIFFER_FDCAN_CLOCK_HZ,
     1U, 256U,
     1U, 128U,
     128U,
     1U, 512U, 1U
+  };
+  uint16_t length = (requested < sizeof(constants)) ? requested : sizeof(constants);
+
+  (void)memcpy(gs_ctrl_buffer, &constants, sizeof(constants));
+  return (uint8_t)USBD_CtlSendData(pdev, gs_ctrl_buffer, length);
+}
+
+static uint8_t GS_USB_SendBitTimingConstExtended(USBD_HandleTypeDef *pdev,
+                                                 uint16_t requested)
+{
+  GS_USB_BitTimingConstExtended constants =
+  {
+    GS_CAN_FEATURE_LISTEN_ONLY |
+    GS_CAN_FEATURE_FD |
+    GS_CAN_FEATURE_BT_CONST_EXT,
+    CAN_SNIFFER_FDCAN_CLOCK_HZ,
+    1U, 256U,
+    1U, 128U,
+    128U,
+    1U, 512U, 1U,
+    1U, 32U,
+    1U, 16U,
+    16U,
+    1U, 32U, 1U
   };
   uint16_t length = (requested < sizeof(constants)) ? requested : sizeof(constants);
 
@@ -199,11 +227,18 @@ static uint8_t USBD_GS_USB_Setup(USBD_HandleTypeDef *pdev,
       {
         return GS_USB_SendBitTimingConst(pdev, req->wLength);
       }
+      if ((req->bRequest == GS_USB_BREQ_BT_CONST_EXT) && (req->wValue == 0U))
+      {
+        return GS_USB_SendBitTimingConstExtended(pdev, req->wLength);
+      }
     }
     else if (((req->bRequest == GS_USB_BREQ_HOST_FORMAT) &&
               (req->wValue == 1U) &&
               (req->wLength == sizeof(GS_USB_HostConfig))) ||
              ((req->bRequest == GS_USB_BREQ_BITTIMING) &&
+              (req->wValue == 0U) &&
+              (req->wLength == sizeof(GS_USB_BitTiming))) ||
+             ((req->bRequest == GS_USB_BREQ_DATA_BITTIMING) &&
               (req->wValue == 0U) &&
               (req->wLength == sizeof(GS_USB_BitTiming))) ||
              ((req->bRequest == GS_USB_BREQ_MODE) &&
@@ -275,6 +310,18 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
                                     timing.phase_seg2,
                                     timing.sjw,
                                     timing.brp) ?
+           (uint8_t)USBD_OK : (uint8_t)USBD_FAIL;
+  }
+
+  if (request == GS_USB_BREQ_DATA_BITTIMING)
+  {
+    GS_USB_BitTiming timing;
+    (void)memcpy(&timing, gs_ctrl_buffer, sizeof(timing));
+    return CAN_Sniffer_SetDataBitTiming(timing.prop_seg,
+                                        timing.phase_seg1,
+                                        timing.phase_seg2,
+                                        timing.sjw,
+                                        timing.brp) ?
            (uint8_t)USBD_OK : (uint8_t)USBD_FAIL;
   }
 
@@ -354,7 +401,8 @@ uint8_t USBD_GS_USB_Transmit(USBD_HandleTypeDef *pdev,
   USBD_StatusTypeDef status;
 
   if ((pdev == NULL) || (buffer == NULL) ||
-      (length != GS_USB_HOST_FRAME_SIZE) ||
+      ((length != GS_USB_CLASSIC_HOST_FRAME_SIZE) &&
+       (length != GS_USB_FD_HOST_FRAME_SIZE)) ||
       (pdev->dev_state != USBD_STATE_CONFIGURED) ||
       (pdev->pClassData != &gs_handle))
   {

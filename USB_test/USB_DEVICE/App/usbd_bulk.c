@@ -338,7 +338,8 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
     if ((mode.mode == GS_CAN_MODE_START) &&
         ((mode.flags & GS_CAN_MODE_LISTEN_ONLY) != 0U))
     {
-      return CAN_Sniffer_StartListenOnly() ?
+      return CAN_Sniffer_StartListenOnlyMode(
+                 (mode.flags & GS_CAN_MODE_FD) != 0U) ?
              (uint8_t)USBD_OK : (uint8_t)USBD_FAIL;
     }
   }

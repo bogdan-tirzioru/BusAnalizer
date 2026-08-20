@@ -17,6 +17,13 @@
 #define RX_ELEMENT_BRS_MASK   0x00100000U
 #define RX_ELEMENT_FDF_MASK   0x00200000U
 
+/*
+ * Maximum number of frames taken from one FDCAN FIFO during a single
+ * CAN_Sniffer_Process() pass. Bounding the work guarantees that the main loop
+ * returns to GS_USB_App_Task() regularly even when both CAN buses are saturated.
+ */
+#define CAN_RX_BUDGET_PER_CHANNEL 8U
+
 extern FDCAN_HandleTypeDef hfdcan1;
 extern FDCAN_HandleTypeDef hfdcan2;
 
@@ -239,6 +246,7 @@ static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
   CAN_SnifferFrame frame;
   uint32_t fifo_status;
   uint32_t fill;
+  uint32_t processed = 0U;
 
   if (!ctx->hardware_started)
   {
@@ -258,7 +266,13 @@ static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
     ctx->hfdcan->Instance->IR = FDCAN_IR_RF0L;
   }
 
-  while ((ctx->hfdcan->Instance->RXF0S & FDCAN_RXF0S_F0FL) != 0U)
+  /*
+   * Do not drain an active FIFO indefinitely. Under continuous CAN FD traffic
+   * that can starve the USB task even though the CPU still has spare capacity.
+   * Consume a small bounded burst and then yield back to the main loop.
+   */
+  while ((processed < CAN_RX_BUDGET_PER_CHANNEL) &&
+         ((ctx->hfdcan->Instance->RXF0S & FDCAN_RXF0S_F0FL) != 0U))
   {
     if (!CAN_ReadFifo0Direct(ctx, &frame))
     {
@@ -267,6 +281,7 @@ static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
     }
 
     ctx->rx_frames++;
+    processed++;
     if (ctx->capture_running)
     {
       (void)CAN_CaptureBuffer_Push(&frame);
@@ -296,7 +311,11 @@ void CAN_Sniffer_Init(void)
 
 void CAN_Sniffer_Process(void)
 {
-  /* Alternate the first fully-drained FIFO to avoid a fixed channel bias. */
+  /*
+   * Give each channel one bounded service slice per pass. Alternate which
+   * channel receives the first slice so neither channel has a permanent
+   * latency advantage.
+   */
   if (process_first_channel == 0U)
   {
     CAN_ProcessChannel(&channels[0]);

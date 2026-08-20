@@ -26,6 +26,7 @@ static uint32_t max_fifo_fill;
 static uint32_t current_bitrate = CAN_SNIFFER_BITRATE_1M;
 static uint32_t current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
 static bool hardware_started;
+static bool current_can_fd = true;
 
 static bool CAN_ConfigureAndStartHardware(void)
 {
@@ -87,7 +88,7 @@ static bool CAN_ApplyBitrateProfile(uint32_t bitrate)
    *   prescaler 10 -> 500 kbit/s
    *   prescaler  5 ->   1 Mbit/s
    */
-  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.FrameFormat = current_can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
   hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   hfdcan1.Init.NominalPrescaler = prescaler;
   hfdcan1.Init.NominalSyncJumpWidth = 2U;
@@ -199,6 +200,7 @@ void CAN_Sniffer_Init(void)
   hardware_started = false;
   current_bitrate = CAN_SNIFFER_BITRATE_1M;
   current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
+  current_can_fd = true;
 }
 
 void CAN_Sniffer_Process(void)
@@ -321,7 +323,7 @@ bool CAN_Sniffer_SetBitTiming(uint32_t prop_seg,
   hardware_started = false;
 
   time_seg1 = prop_seg + phase_seg1;
-  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.FrameFormat = current_can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
   hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   hfdcan1.Init.NominalPrescaler = brp;
   hfdcan1.Init.NominalSyncJumpWidth = sjw;
@@ -386,6 +388,11 @@ bool CAN_Sniffer_SetDataBitTiming(uint32_t prop_seg,
 
 bool CAN_Sniffer_StartListenOnly(void)
 {
+  return CAN_Sniffer_StartListenOnlyMode(current_can_fd);
+}
+
+bool CAN_Sniffer_StartListenOnlyMode(bool can_fd)
+{
   capture_running = false;
 
   if (hardware_started)
@@ -397,7 +404,7 @@ bool CAN_Sniffer_StartListenOnly(void)
     hardware_started = false;
   }
 
-  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.FrameFormat = can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
   hfdcan1.Init.Mode = FDCAN_MODE_BUS_MONITORING;
   if ((HAL_FDCAN_Init(&hfdcan1) != HAL_OK) ||
       !CAN_ConfigureAndStartHardware())
@@ -405,6 +412,7 @@ bool CAN_Sniffer_StartListenOnly(void)
     return false;
   }
 
+  current_can_fd = can_fd;
   CAN_CaptureBuffer_Clear();
   capture_running = true;
   return true;

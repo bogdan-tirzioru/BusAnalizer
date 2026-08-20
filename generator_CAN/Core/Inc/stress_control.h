@@ -9,20 +9,22 @@ extern "C" {
 #endif
 
 /*
- * Runtime CAN-bus stress control for the generator.
+ * Runtime traffic and CAN-mode control for the generator.
  *
- * 100% keeps the original behaviour: FDCAN1 is filled as fast as possible.
- * 0..99% paces the 8-byte standard frames against an approximately
- * 4300 frame/s full-load reference at 500 kbit/s.
- *
- * Runtime console command:
+ * Stress command:
  *     <0..100><Enter>
- * Examples:
- *     25<Enter>
- *     50<Enter>
- *     100<Enter>
+ *     0 pauses traffic, 100 keeps the original maximum-throughput behaviour.
  *
- * '?' prints a short help line.
+ * CAN commands:
+ *     can classic 500k
+ *     can classic 1m
+ *     can fd 500k 2m
+ *     can fd 500k 5m
+ *     can fd 1m 2m
+ *     can fd 1m 5m
+ *     can status
+ *
+ * '?' prints the command list.
  */
 uint32_t StressControl_GetLevelPercent(void);
 uint32_t StressControl_GetTargetFramesPerSecond(void);
@@ -43,7 +45,7 @@ HAL_StatusTypeDef StressControl_FDCAN_AddMessageToTxFifoQ(
  * parsed. Application code therefore keeps its normal HAL calls while the
  * generator TX path is transparently paced by this module. FDCAN1 start is
  * also wrapped so transmitter delay compensation is enabled before CAN FD+BRS
- * traffic begins.
+ * traffic begins. Classic CAN starts without TDC.
  */
 #define HAL_FDCAN_Start(hfdcan) \
     StressControl_FDCAN_Start((hfdcan))

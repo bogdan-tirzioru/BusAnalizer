@@ -27,6 +27,9 @@ extern "C" {
 uint32_t StressControl_GetLevelPercent(void);
 uint32_t StressControl_GetTargetFramesPerSecond(void);
 
+HAL_StatusTypeDef StressControl_FDCAN_Start(
+        FDCAN_HandleTypeDef *hfdcan);
+
 uint32_t StressControl_FDCAN_GetTxFifoFreeLevel(
         FDCAN_HandleTypeDef *hfdcan);
 
@@ -38,8 +41,13 @@ HAL_StatusTypeDef StressControl_FDCAN_AddMessageToTxFifoQ(
 /*
  * main.h includes this file only after STM32 HAL declarations have been
  * parsed. Application code therefore keeps its normal HAL calls while the
- * generator TX path is transparently paced by this module.
+ * generator TX path is transparently paced by this module. FDCAN1 start is
+ * also wrapped so transmitter delay compensation is enabled before CAN FD+BRS
+ * traffic begins.
  */
+#define HAL_FDCAN_Start(hfdcan) \
+    StressControl_FDCAN_Start((hfdcan))
+
 #define HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) \
     StressControl_FDCAN_GetTxFifoFreeLevel((hfdcan))
 

@@ -35,7 +35,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define CPU_LOAD_CALIBRATION_MS 500U
+#define CPU_LOAD_WINDOW_MS      1000U
+#define CPU_LOAD_REPORT_WINDOWS 5U
+#define CPU_LOAD_POLL_DIVIDER   16384U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,7 +53,18 @@ FDCAN_HandleTypeDef hfdcan1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-
+static uint32_t cpu_idle_ref_loops;
+static uint32_t cpu_idle_ref_cycles;
+static uint32_t cpu_window_start_cycles;
+static uint32_t cpu_window_start_ms;
+static uint32_t cpu_window_loops;
+static uint32_t cpu_task_poll_divider;
+static uint32_t cpu_last_rx_frames;
+static uint32_t cpu_load_sum_permille;
+static uint32_t cpu_load_max_permille;
+static uint32_t cpu_rx_sum;
+static uint32_t cpu_load_samples;
+static uint8_t cpu_load_ready;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,12 +74,199 @@ static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void CPU_Load_Init(void);
+static void CPU_Load_Task(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void CPU_Load_Init(void)
+{
+  uint32_t start_ms;
+  uint32_t start_cycles;
+  uint32_t elapsed_cycles;
+  uint32_t loops = 0U;
+  uint32_t poll_divider = 0U;
+  uint32_t idle_loops_per_second;
 
+  /* Enable the Cortex-M7 DWT cycle counter. */
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0U;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+  if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0U)
+  {
+    cpu_load_ready = 0U;
+    Logger_Write("CPU load measurement unavailable: DWT CYCCNT disabled\r\n");
+    return;
+  }
+
+  /*
+   * Establish an idle-loop reference using exactly the same two polling
+   * functions as the normal main loop. FDCAN capture is normally stopped at
+   * this point, so this measures the loop capacity available before CAN load.
+   * The reference can later improve automatically during a traffic-free
+   * one-second window.
+   */
+  start_ms = HAL_GetTick();
+  start_cycles = DWT->CYCCNT;
+  for (;;)
+  {
+    CAN_Sniffer_Process();
+    GS_USB_App_Task();
+    loops++;
+
+    poll_divider++;
+    if (poll_divider >= CPU_LOAD_POLL_DIVIDER)
+    {
+      poll_divider = 0U;
+      if ((uint32_t)(HAL_GetTick() - start_ms) >= CPU_LOAD_CALIBRATION_MS)
+      {
+        break;
+      }
+    }
+  }
+
+  elapsed_cycles = DWT->CYCCNT - start_cycles;
+  if ((loops == 0U) || (elapsed_cycles == 0U))
+  {
+    cpu_load_ready = 0U;
+    Logger_Write("CPU load measurement unavailable: invalid idle reference\r\n");
+    return;
+  }
+
+  cpu_idle_ref_loops = loops;
+  cpu_idle_ref_cycles = elapsed_cycles;
+  cpu_window_loops = 0U;
+  cpu_task_poll_divider = 0U;
+  cpu_load_sum_permille = 0U;
+  cpu_load_max_permille = 0U;
+  cpu_rx_sum = 0U;
+  cpu_load_samples = 0U;
+  cpu_load_ready = 1U;
+
+  idle_loops_per_second = (uint32_t)(((uint64_t)cpu_idle_ref_loops *
+                                      (uint64_t)HAL_RCC_GetSysClockFreq()) /
+                                     cpu_idle_ref_cycles);
+  Logger_Printf("CPU load baseline: %lu loops/s over %lu ms\r\n",
+                (unsigned long)idle_loops_per_second,
+                (unsigned long)(HAL_GetTick() - start_ms));
+
+  /* Start the first measurement window after the calibration log output. */
+  cpu_last_rx_frames = CAN_Sniffer_GetRxCount();
+  cpu_window_start_ms = HAL_GetTick();
+  cpu_window_start_cycles = DWT->CYCCNT;
+}
+
+static void CPU_Load_Task(void)
+{
+  uint32_t now_ms;
+  uint32_t now_cycles;
+  uint32_t elapsed_cycles;
+  uint32_t frames;
+  uint32_t rx_delta;
+  uint32_t load_permille;
+  uint32_t avg_permille;
+  uint32_t loops_per_second;
+  uint32_t idle_loops_per_second;
+  uint64_t expected_idle_loops;
+
+  if (cpu_load_ready == 0U)
+  {
+    return;
+  }
+
+  now_ms = HAL_GetTick();
+  if ((uint32_t)(now_ms - cpu_window_start_ms) < CPU_LOAD_WINDOW_MS)
+  {
+    return;
+  }
+
+  now_cycles = DWT->CYCCNT;
+  elapsed_cycles = now_cycles - cpu_window_start_cycles;
+  frames = CAN_Sniffer_GetRxCount();
+  rx_delta = frames - cpu_last_rx_frames;
+
+  if (elapsed_cycles == 0U)
+  {
+    cpu_window_loops = 0U;
+    cpu_last_rx_frames = frames;
+    cpu_window_start_ms = now_ms;
+    cpu_window_start_cycles = now_cycles;
+    return;
+  }
+
+  /*
+   * A traffic-free interval is allowed to improve the idle reference. Using
+   * the fastest observed idle ratio prevents USB enumeration or a one-off
+   * interrupt burst during boot from making the reference artificially slow.
+   */
+  if ((rx_delta == 0U) && (cpu_window_loops != 0U) &&
+      (((uint64_t)cpu_window_loops * cpu_idle_ref_cycles) >
+       ((uint64_t)cpu_idle_ref_loops * elapsed_cycles)))
+  {
+    cpu_idle_ref_loops = cpu_window_loops;
+    cpu_idle_ref_cycles = elapsed_cycles;
+  }
+
+  expected_idle_loops = ((uint64_t)cpu_idle_ref_loops * elapsed_cycles) /
+                        cpu_idle_ref_cycles;
+
+  if ((expected_idle_loops == 0U) ||
+      ((uint64_t)cpu_window_loops >= expected_idle_loops))
+  {
+    load_permille = 0U;
+  }
+  else
+  {
+    load_permille = 1000U -
+                    (uint32_t)(((uint64_t)cpu_window_loops * 1000U) /
+                               expected_idle_loops);
+  }
+
+  if (load_permille > 1000U)
+  {
+    load_permille = 1000U;
+  }
+
+  cpu_load_sum_permille += load_permille;
+  if (load_permille > cpu_load_max_permille)
+  {
+    cpu_load_max_permille = load_permille;
+  }
+  cpu_rx_sum += rx_delta;
+  cpu_load_samples++;
+
+  loops_per_second = (uint32_t)(((uint64_t)cpu_window_loops *
+                                 (uint64_t)HAL_RCC_GetSysClockFreq()) /
+                                elapsed_cycles);
+  idle_loops_per_second = (uint32_t)(((uint64_t)cpu_idle_ref_loops *
+                                      (uint64_t)HAL_RCC_GetSysClockFreq()) /
+                                     cpu_idle_ref_cycles);
+
+  cpu_window_loops = 0U;
+  cpu_last_rx_frames = frames;
+  cpu_window_start_ms = now_ms;
+  cpu_window_start_cycles = now_cycles;
+
+  if (cpu_load_samples >= CPU_LOAD_REPORT_WINDOWS)
+  {
+    avg_permille = cpu_load_sum_permille / cpu_load_samples;
+    Logger_Printf("CPU load: avg=%lu.%lu%% max=%lu.%lu%% loops=%lu/s idle=%lu/s CAN=%lu fps\r\n",
+                  (unsigned long)(avg_permille / 10U),
+                  (unsigned long)(avg_permille % 10U),
+                  (unsigned long)(cpu_load_max_permille / 10U),
+                  (unsigned long)(cpu_load_max_permille % 10U),
+                  (unsigned long)loops_per_second,
+                  (unsigned long)idle_loops_per_second,
+                  (unsigned long)(cpu_rx_sum / cpu_load_samples));
+
+    cpu_load_sum_permille = 0U;
+    cpu_load_max_permille = 0U;
+    cpu_rx_sum = 0U;
+    cpu_load_samples = 0U;
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -107,6 +308,7 @@ int main(void)
   CAN_Sniffer_Init();
   GS_USB_App_Init();
   Logger_Write("CAN1 passive sniffer ready: USB gs_usb / SocketCAN\r\n");
+  CPU_Load_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -118,6 +320,17 @@ int main(void)
     /* USER CODE BEGIN 3 */
     CAN_Sniffer_Process();
     GS_USB_App_Task();
+
+    if (cpu_load_ready != 0U)
+    {
+      cpu_window_loops++;
+      cpu_task_poll_divider++;
+      if (cpu_task_poll_divider >= CPU_LOAD_POLL_DIVIDER)
+      {
+        cpu_task_poll_divider = 0U;
+        CPU_Load_Task();
+      }
+    }
   }
   /* USER CODE END 3 */
 }

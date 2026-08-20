@@ -57,7 +57,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-
 #define CAN1_STBY_Pin GPIO_PIN_3
 #define CAN1_STBY_GPIO_Port GPIOA
 

@@ -2460,3 +2460,5 @@ HAL_FDCAN_StateTypeDef HAL_FDCAN_GetState(const FDCAN_HandleTypeDef *hfdcan);
 #endif
 
 #endif /* STM32H7xx_HAL_FDCAN_H */
+
+

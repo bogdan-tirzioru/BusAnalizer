@@ -513,6 +513,10 @@ bool CAN_Sniffer_StartListenOnlyModeChannel(uint8_t channel, bool can_fd)
     return false;
   }
 
+  ctx->fifo_lost_events = 0U;
+  ctx->max_fifo_fill = 0U;
+  ctx->read_errors = 0U;
+
   ctx->hfdcan->Init.FrameFormat = can_fd ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_CLASSIC;
   ctx->hfdcan->Init.Mode = FDCAN_MODE_BUS_MONITORING;
 

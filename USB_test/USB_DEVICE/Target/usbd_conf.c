@@ -45,6 +45,84 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN 0 */
 
+#define GS_USB_FAST_IN_EP 0x81U
+
+static void USBD_LL_TryPreloadGsUsbTxFifo(PCD_HandleTypeDef *hpcd,
+                                           uint8_t ep_addr,
+                                           uint8_t *buffer,
+                                           uint32_t length)
+{
+  uint32_t USBx_BASE;
+  PCD_EPTypeDef *ep;
+  uint32_t epnum;
+  uint32_t length_words;
+  uint32_t primask;
+
+  if ((hpcd == NULL) || (buffer == NULL) ||
+      (ep_addr != GS_USB_FAST_IN_EP) || (length == 0U) ||
+      (hpcd->Init.dma_enable != 0U))
+  {
+    return;
+  }
+
+  USBx_BASE = (uint32_t)hpcd->Instance;
+  epnum = ep_addr & EP_ADDR_MSK;
+  ep = &hpcd->IN_ep[epnum];
+  length_words = (length + 3U) / 4U;
+
+  /*
+   * HAL_PCD_EP_Transmit() normally enables the TX-FIFO-empty interrupt and
+   * lets that interrupt copy the record into the endpoint FIFO. EP1 has 372
+   * FIFO words while a gs_usb FD record needs only 19 words, so preload the
+   * complete record here and eliminate one interrupt from every transfer.
+   *
+   * The critical section also covers the case where the TXFE interrupt became
+   * pending immediately after HAL_PCD_EP_Transmit(). If it already ran,
+   * xfer_count is non-zero and this helper leaves the completed preload alone.
+   */
+  primask = __get_PRIMASK();
+  __disable_irq();
+
+  if ((ep->xfer_buff == buffer) &&
+      (ep->xfer_len == length) &&
+      (ep->xfer_count == 0U) &&
+      ((USBx_INEP(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >=
+       length_words))
+  {
+    (void)USB_WritePacket(hpcd->Instance, buffer, (uint8_t)epnum,
+                          (uint16_t)length, 0U);
+    ep->xfer_buff += length;
+    ep->xfer_count = length;
+    USBx_DEVICE->DIEPEMPMSK &= ~(1UL << epnum);
+  }
+
+  if (primask == 0U)
+  {
+    __enable_irq();
+  }
+}
+
+static HAL_StatusTypeDef USBD_LL_TransmitWithGsUsbPreload(
+    PCD_HandleTypeDef *hpcd,
+    uint8_t ep_addr,
+    uint8_t *buffer,
+    uint32_t length)
+{
+  HAL_StatusTypeDef status;
+
+  status = HAL_PCD_EP_Transmit(hpcd, ep_addr, buffer, length);
+  if (status == HAL_OK)
+  {
+    USBD_LL_TryPreloadGsUsbTxFifo(hpcd, ep_addr, buffer, length);
+  }
+  return status;
+}
+
+/* Keep the generated USBD_LL_Transmit() body unchanged and route its HAL call
+ * through the CubeMX-preserved fast path above. */
+#define HAL_PCD_EP_Transmit(hpcd, ep_addr, buffer, length) \
+  USBD_LL_TransmitWithGsUsbPreload((hpcd), (ep_addr), (buffer), (length))
+
 /* USER CODE END 0 */
 
 /* USER CODE BEGIN PFP */

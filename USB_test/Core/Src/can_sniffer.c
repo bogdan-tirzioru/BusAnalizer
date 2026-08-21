@@ -36,7 +36,7 @@ typedef struct
 } CAN_SnifferChannel;
 
 static CAN_SnifferChannel channels[CAN_SNIFFER_CHANNEL_COUNT];
-static uint8_t process_first_channel;
+static uint8_t process_next_channel;
 
 static CAN_SnifferChannel *CAN_GetChannel(uint8_t channel)
 {
@@ -290,24 +290,27 @@ void CAN_Sniffer_Init(void)
   channels[1].current_data_bitrate = CAN_SNIFFER_DATA_BITRATE_5M;
   channels[1].current_can_fd = true;
 
-  process_first_channel = 0U;
+  process_next_channel = 0U;
   CAN_CaptureBuffer_Init();
 }
 
 void CAN_Sniffer_Process(void)
 {
-  /* Alternate the first fully-drained FIFO to avoid a fixed channel bias. */
-  if (process_first_channel == 0U)
+  /*
+   * Drain one complete channel FIFO per main-loop pass, then return so the
+   * gs_usb task can refill its TX pipeline before the other CAN channel is
+   * serviced. Alternating channels preserves fairness without reintroducing
+   * the fixed per-channel frame budget that previously caused a regression.
+   */
+  if (process_next_channel == 0U)
   {
     CAN_ProcessChannel(&channels[0]);
-    CAN_ProcessChannel(&channels[1]);
-    process_first_channel = 1U;
+    process_next_channel = 1U;
   }
   else
   {
     CAN_ProcessChannel(&channels[1]);
-    CAN_ProcessChannel(&channels[0]);
-    process_first_channel = 0U;
+    process_next_channel = 0U;
   }
 }
 

@@ -145,7 +145,7 @@ extern USBD_ClassTypeDef USBD_GS_USB;
 uint8_t USBD_GS_USB_Transmit(USBD_HandleTypeDef *pdev,
                              uint8_t *buffer,
                              uint32_t length);
-uint8_t USBD_GS_USB_TxReady(USBD_HandleTypeDef *pdev);
+uint8_t USBD_GS_USB_TxSlotsAvailable(USBD_HandleTypeDef *pdev);
 
 #ifdef __cplusplus
 }

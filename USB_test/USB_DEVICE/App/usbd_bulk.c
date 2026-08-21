@@ -13,7 +13,10 @@ typedef struct
 {
   uint8_t *tx_buffer;
   uint32_t tx_length;
+  uint8_t *tx_pending_buffer;
+  uint32_t tx_pending_length;
   volatile uint8_t tx_busy;
+  volatile uint8_t tx_pending;
   uint8_t pending_request;
   uint8_t pending_channel;
   uint8_t pending_valid;
@@ -359,12 +362,35 @@ static uint8_t USBD_GS_USB_EP0_RxReady(USBD_HandleTypeDef *pdev)
 
 static uint8_t USBD_GS_USB_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
-  UNUSED(pdev);
+  uint8_t *next_buffer;
+  uint32_t next_length;
+
   if ((epnum & 0x0FU) != (GS_USB_IN_EP & 0x0FU))
   {
     return (uint8_t)USBD_FAIL;
   }
-  gs_handle.tx_busy = 0U;
+
+  if (gs_handle.tx_pending != 0U)
+  {
+    next_buffer = gs_handle.tx_pending_buffer;
+    next_length = gs_handle.tx_pending_length;
+    gs_handle.tx_buffer = next_buffer;
+    gs_handle.tx_length = next_length;
+    gs_handle.tx_pending = 0U;
+
+    /* Keep the endpoint busy and launch the queued frame from the completion
+     * callback. This removes one main-loop round trip between USB transfers. */
+    if (USBD_LL_Transmit(pdev, GS_USB_IN_EP,
+                         next_buffer, next_length) != USBD_OK)
+    {
+      gs_handle.tx_busy = 0U;
+      return (uint8_t)USBD_FAIL;
+    }
+  }
+  else
+  {
+    gs_handle.tx_busy = 0U;
+  }
   return (uint8_t)USBD_OK;
 }
 
@@ -410,6 +436,8 @@ uint8_t USBD_GS_USB_Transmit(USBD_HandleTypeDef *pdev,
                              uint32_t length)
 {
   USBD_StatusTypeDef status;
+  uint32_t primask;
+  uint8_t start_now = 0U;
 
   if ((pdev == NULL) || (buffer == NULL) ||
       ((length != GS_USB_CLASSIC_HOST_FRAME_SIZE) &&
@@ -419,28 +447,66 @@ uint8_t USBD_GS_USB_Transmit(USBD_HandleTypeDef *pdev,
   {
     return (uint8_t)USBD_FAIL;
   }
-  if (gs_handle.tx_busy != 0U)
+  primask = __get_PRIMASK();
+  __disable_irq();
+
+  if (gs_handle.tx_busy == 0U)
   {
+    gs_handle.tx_buffer = buffer;
+    gs_handle.tx_length = length;
+    gs_handle.tx_busy = 1U;
+    start_now = 1U;
+  }
+  else if (gs_handle.tx_pending == 0U)
+  {
+    gs_handle.tx_pending_buffer = buffer;
+    gs_handle.tx_pending_length = length;
+    gs_handle.tx_pending = 1U;
+  }
+  else
+  {
+    if (primask == 0U)
+    {
+      __enable_irq();
+    }
     return (uint8_t)USBD_BUSY;
   }
 
-  gs_handle.tx_buffer = buffer;
-  gs_handle.tx_length = length;
-  gs_handle.tx_busy = 1U;
+  if (primask == 0U)
+  {
+    __enable_irq();
+  }
+
+  if (start_now == 0U)
+  {
+    return (uint8_t)USBD_OK;
+  }
+
   status = USBD_LL_Transmit(pdev, GS_USB_IN_EP, buffer, length);
   if (status != USBD_OK)
   {
+    primask = __get_PRIMASK();
+    __disable_irq();
     gs_handle.tx_busy = 0U;
+    if (primask == 0U)
+    {
+      __enable_irq();
+    }
   }
   return (uint8_t)status;
 }
 
-uint8_t USBD_GS_USB_TxReady(USBD_HandleTypeDef *pdev)
+uint8_t USBD_GS_USB_TxSlotsAvailable(USBD_HandleTypeDef *pdev)
 {
+  uint8_t used;
+
   if ((pdev == NULL) || (pdev->dev_state != USBD_STATE_CONFIGURED) ||
       (pdev->pClassData != &gs_handle))
   {
     return 0U;
   }
-  return (gs_handle.tx_busy == 0U) ? 1U : 0U;
+
+  used = (gs_handle.tx_busy != 0U) ? 1U : 0U;
+  used += (gs_handle.tx_pending != 0U) ? 1U : 0U;
+  return (uint8_t)(2U - used);
 }

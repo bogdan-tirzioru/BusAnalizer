@@ -3,6 +3,7 @@
 #include "can_capture_buffer.h"
 #include "can_sniffer.h"
 #include "logger.h"
+#include "gs_usb_stats.h"
 #include "usb_device.h"
 #include "usbd_bulk.h"
 
@@ -51,6 +52,9 @@ void GS_USB_App_Task(void)
   uint32_t now = HAL_GetTick();
   uint32_t can1_frames;
   uint32_t can2_frames;
+  uint32_t buffer_high_water;
+  uint32_t max_completion_gap_us;
+  GS_USB_PerfStats usb_stats;
 
   if (hUsbDeviceHS.dev_state != USBD_STATE_CONFIGURED)
   {
@@ -125,16 +129,28 @@ void GS_USB_App_Task(void)
   {
     can1_frames = CAN_Sniffer_GetChannelRxCount(0U);
     can2_frames = CAN_Sniffer_GetChannelRxCount(1U);
+    buffer_high_water = CAN_CaptureBuffer_GetAndResetHighWater();
+    GS_USB_Stats_SnapshotAndReset(&usb_stats);
+    max_completion_gap_us = GS_USB_Stats_CyclesToMicroseconds(
+        usb_stats.max_completion_gap_cycles);
 
-    Logger_Printf("CAN1 %lu fps buf=%lu drop=%lu lost=%lu max=%lu | CAN2 %lu fps lost=%lu max=%lu logdrop=%lu\r\n",
+    Logger_Printf("CAN1 %lu fps buf=%lu hi=%lu drop=%lu lost=%lu max=%lu | CAN2 %lu fps lost=%lu max=%lu | USB tx=%lu/%lu bytes=%lu idle=%lu gap=%luus pre=%lu/%lu logdrop=%lu\r\n",
                   (unsigned long)(can1_frames - last_logged_frames[0]),
                   (unsigned long)CAN_Sniffer_GetBufferedCount(),
+                  (unsigned long)buffer_high_water,
                   (unsigned long)CAN_Sniffer_GetDroppedCount(),
                   (unsigned long)CAN_Sniffer_GetChannelFifoLostEvents(0U),
                   (unsigned long)CAN_Sniffer_GetChannelMaxFifoFill(0U),
                   (unsigned long)(can2_frames - last_logged_frames[1]),
                   (unsigned long)CAN_Sniffer_GetChannelFifoLostEvents(1U),
                   (unsigned long)CAN_Sniffer_GetChannelMaxFifoFill(1U),
+                  (unsigned long)usb_stats.transfers_started,
+                  (unsigned long)usb_stats.transfers_completed,
+                  (unsigned long)usb_stats.bytes_completed,
+                  (unsigned long)usb_stats.endpoint_idle_events,
+                  (unsigned long)max_completion_gap_us,
+                  (unsigned long)usb_stats.fifo_preload_hits,
+                  (unsigned long)usb_stats.fifo_preload_fallbacks,
                   (unsigned long)Logger_GetDroppedCount());
 
     last_logged_frames[0] = can1_frames;

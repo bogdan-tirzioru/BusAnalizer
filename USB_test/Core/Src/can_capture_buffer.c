@@ -9,6 +9,7 @@ static CAN_SnifferFrame capture_buffer[CAN_CAPTURE_CAPACITY];
 static volatile uint32_t write_sequence;
 static volatile uint32_t read_sequence;
 static volatile uint32_t dropped_frames;
+static uint32_t high_watermark;
 
 void CAN_CaptureBuffer_Init(void)
 {
@@ -28,7 +29,14 @@ CAN_SnifferFrame *CAN_CaptureBuffer_BeginPush(void)
 
 void CAN_CaptureBuffer_CommitPush(void)
 {
+  uint32_t count;
+
   write_sequence++;
+  count = write_sequence - read_sequence;
+  if (count > high_watermark)
+  {
+    high_watermark = count;
+  }
 }
 
 void CAN_CaptureBuffer_RecordDrop(void)
@@ -55,6 +63,7 @@ void CAN_CaptureBuffer_Clear(void)
 {
   write_sequence = 0U;
   read_sequence = 0U;
+  high_watermark = 0U;
 }
 
 uint32_t CAN_CaptureBuffer_GetCount(void)
@@ -70,4 +79,12 @@ uint32_t CAN_CaptureBuffer_GetFree(void)
 uint32_t CAN_CaptureBuffer_GetDropped(void)
 {
   return dropped_frames;
+}
+
+uint32_t CAN_CaptureBuffer_GetAndResetHighWater(void)
+{
+  uint32_t high_water = high_watermark;
+
+  high_watermark = CAN_CaptureBuffer_GetCount();
+  return high_water;
 }

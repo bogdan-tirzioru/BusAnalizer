@@ -1,6 +1,7 @@
 #include "usbd_bulk.h"
 
 #include "can_sniffer.h"
+#include "gs_usb_stats.h"
 #include "usbd_core.h"
 #include "usbd_ctlreq.h"
 
@@ -120,6 +121,7 @@ static uint8_t USBD_GS_USB_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 
   UNUSED(cfgidx);
   (void)USBD_memset(&gs_handle, 0, sizeof(gs_handle));
+  GS_USB_Stats_Init();
 
   pdev->pClassDataCmsit[pdev->classId] = &gs_handle;
   pdev->pClassData = &gs_handle;
@@ -370,6 +372,8 @@ static uint8_t USBD_GS_USB_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
     return (uint8_t)USBD_FAIL;
   }
 
+  GS_USB_Stats_RecordTransferCompleted(gs_handle.tx_length);
+
   if (gs_handle.tx_pending != 0U)
   {
     next_buffer = gs_handle.tx_pending_buffer;
@@ -384,12 +388,15 @@ static uint8_t USBD_GS_USB_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
                          next_buffer, next_length) != USBD_OK)
     {
       gs_handle.tx_busy = 0U;
+      GS_USB_Stats_RecordEndpointIdle();
       return (uint8_t)USBD_FAIL;
     }
+    GS_USB_Stats_RecordTransferStarted();
   }
   else
   {
     gs_handle.tx_busy = 0U;
+    GS_USB_Stats_RecordEndpointIdle();
   }
   return (uint8_t)USBD_OK;
 }
@@ -492,6 +499,10 @@ uint8_t USBD_GS_USB_Transmit(USBD_HandleTypeDef *pdev,
     {
       __enable_irq();
     }
+  }
+  else
+  {
+    GS_USB_Stats_RecordTransferStarted();
   }
   return (uint8_t)status;
 }

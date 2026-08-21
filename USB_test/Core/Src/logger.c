@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LOGGER_BUFFER_SIZE   256U
+#define LOGGER_BUFFER_SIZE   320U
 #define LOGGER_QUEUE_CAPACITY 4U
 
 _Static_assert((LOGGER_QUEUE_CAPACITY & (LOGGER_QUEUE_CAPACITY - 1U)) == 0U,

@@ -27,6 +27,8 @@
 
 /* USER CODE BEGIN Includes */
 
+#include "gs_usb_stats.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,6 +59,7 @@ static void USBD_LL_TryPreloadGsUsbTxFifo(PCD_HandleTypeDef *hpcd,
   uint32_t epnum;
   uint32_t length_words;
   uint32_t primask;
+  uint8_t preloaded = 0U;
 
   if ((hpcd == NULL) || (buffer == NULL) ||
       (ep_addr != GS_USB_FAST_IN_EP) || (length == 0U) ||
@@ -94,12 +97,14 @@ static void USBD_LL_TryPreloadGsUsbTxFifo(PCD_HandleTypeDef *hpcd,
     ep->xfer_buff += length;
     ep->xfer_count = length;
     USBx_DEVICE->DIEPEMPMSK &= ~(1UL << epnum);
+    preloaded = 1U;
   }
 
   if (primask == 0U)
   {
     __enable_irq();
   }
+  GS_USB_Stats_RecordFifoPreload(preloaded);
 }
 
 static HAL_StatusTypeDef USBD_LL_TransmitWithGsUsbPreload(

@@ -37,5 +37,6 @@ void CAN_CaptureBuffer_Clear(void);
 uint32_t CAN_CaptureBuffer_GetCount(void);
 uint32_t CAN_CaptureBuffer_GetFree(void);
 uint32_t CAN_CaptureBuffer_GetDropped(void);
+uint32_t CAN_CaptureBuffer_GetAndResetHighWater(void);
 
 #endif

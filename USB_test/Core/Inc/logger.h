@@ -10,6 +10,7 @@ extern "C" {
 void Logger_Init(UART_HandleTypeDef *uart);
 void Logger_Write(const char *message);
 void Logger_Printf(const char *format, ...);
+uint32_t Logger_GetDroppedCount(void);
 
 #ifdef __cplusplus
 }

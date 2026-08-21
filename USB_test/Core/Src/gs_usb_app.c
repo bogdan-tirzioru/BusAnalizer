@@ -126,7 +126,7 @@ void GS_USB_App_Task(void)
     can1_frames = CAN_Sniffer_GetChannelRxCount(0U);
     can2_frames = CAN_Sniffer_GetChannelRxCount(1U);
 
-    Logger_Printf("CAN1 %lu fps buf=%lu drop=%lu lost=%lu max=%lu | CAN2 %lu fps lost=%lu max=%lu\r\n",
+    Logger_Printf("CAN1 %lu fps buf=%lu drop=%lu lost=%lu max=%lu | CAN2 %lu fps lost=%lu max=%lu logdrop=%lu\r\n",
                   (unsigned long)(can1_frames - last_logged_frames[0]),
                   (unsigned long)CAN_Sniffer_GetBufferedCount(),
                   (unsigned long)CAN_Sniffer_GetDroppedCount(),
@@ -134,7 +134,8 @@ void GS_USB_App_Task(void)
                   (unsigned long)CAN_Sniffer_GetChannelMaxFifoFill(0U),
                   (unsigned long)(can2_frames - last_logged_frames[1]),
                   (unsigned long)CAN_Sniffer_GetChannelFifoLostEvents(1U),
-                  (unsigned long)CAN_Sniffer_GetChannelMaxFifoFill(1U));
+                  (unsigned long)CAN_Sniffer_GetChannelMaxFifoFill(1U),
+                  (unsigned long)Logger_GetDroppedCount());
 
     last_logged_frames[0] = can1_frames;
     last_logged_frames[1] = can2_frames;

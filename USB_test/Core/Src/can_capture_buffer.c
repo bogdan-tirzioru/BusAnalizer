@@ -2,10 +2,10 @@
 
 #include <string.h>
 
-_Static_assert(sizeof(CAN_SnifferFrame) == 72U,
-               "CAN_SnifferFrame CAN FD ABI mismatch");
+_Static_assert(sizeof(GS_USB_HostFrame) == GS_USB_FD_HOST_FRAME_SIZE,
+               "gs_usb capture frame ABI mismatch");
 
-static CAN_SnifferFrame capture_buffer[CAN_CAPTURE_CAPACITY];
+static GS_USB_HostFrame capture_buffer[CAN_CAPTURE_CAPACITY];
 static volatile uint32_t write_sequence;
 static volatile uint32_t read_sequence;
 static volatile uint32_t dropped_frames;
@@ -16,7 +16,7 @@ void CAN_CaptureBuffer_Init(void)
   dropped_frames = 0U;
 }
 
-bool CAN_CaptureBuffer_Push(const CAN_SnifferFrame *frame)
+bool CAN_CaptureBuffer_Push(const GS_USB_HostFrame *frame)
 {
   if ((frame == NULL) || ((write_sequence - read_sequence) >= CAN_CAPTURE_CAPACITY))
   {
@@ -32,7 +32,7 @@ bool CAN_CaptureBuffer_Push(const CAN_SnifferFrame *frame)
   return true;
 }
 
-bool CAN_CaptureBuffer_Pop(CAN_SnifferFrame *frame)
+bool CAN_CaptureBuffer_Pop(GS_USB_HostFrame *frame)
 {
   if ((frame == NULL) || (read_sequence == write_sequence))
   {

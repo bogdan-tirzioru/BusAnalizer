@@ -12,7 +12,6 @@
 #define RX_ELEMENT_RTR_MASK   0x20000000U
 #define RX_ELEMENT_XTD_MASK   0x40000000U
 #define RX_ELEMENT_ESI_MASK   0x80000000U
-#define RX_ELEMENT_TS_MASK    0x0000FFFFU
 #define RX_ELEMENT_DLC_MASK   0x000F0000U
 #define RX_ELEMENT_BRS_MASK   0x00100000U
 #define RX_ELEMENT_FDF_MASK   0x00200000U
@@ -157,7 +156,7 @@ static uint8_t CAN_DlcToLength(uint8_t dlc)
 }
 
 static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
-                                CAN_SnifferFrame *frame)
+                                GS_USB_HostFrame *frame)
 {
   uint32_t fifo_status;
   uint32_t get_index;
@@ -179,50 +178,51 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
   word0 = element[0];
   word1 = element[1];
 
-  frame->flags = (ctx->channel == 1U) ? CAN_FRAME_FLAG_CHANNEL_1 : 0U;
+  frame->echo_id = GS_HOST_FRAME_ECHO_ID_RX;
+  frame->channel = ctx->channel;
+  frame->flags = 0U;
+  frame->reserved = 0U;
 
   if ((word0 & RX_ELEMENT_XTD_MASK) != 0U)
   {
-    frame->id = word0 & RX_ELEMENT_EXTID_MASK;
-    frame->flags |= CAN_FRAME_FLAG_EXTENDED;
+    frame->can_id = (word0 & RX_ELEMENT_EXTID_MASK) | GS_CAN_EFF_FLAG;
   }
   else
   {
-    frame->id = (word0 & RX_ELEMENT_STDID_MASK) >> 18;
+    frame->can_id = (word0 & RX_ELEMENT_STDID_MASK) >> 18;
   }
 
   if ((word0 & RX_ELEMENT_RTR_MASK) != 0U)
   {
-    frame->flags |= CAN_FRAME_FLAG_RTR;
+    frame->can_id |= GS_CAN_RTR_FLAG;
   }
   if ((word0 & RX_ELEMENT_ESI_MASK) != 0U)
   {
-    frame->flags |= CAN_FRAME_FLAG_ESI;
+    frame->flags |= GS_CAN_FLAG_ESI;
   }
   if ((word1 & RX_ELEMENT_FDF_MASK) != 0U)
   {
-    frame->flags |= CAN_FRAME_FLAG_FD;
+    frame->flags |= GS_CAN_FLAG_FD;
   }
   if ((word1 & RX_ELEMENT_BRS_MASK) != 0U)
   {
-    frame->flags |= CAN_FRAME_FLAG_BRS;
+    frame->flags |= GS_CAN_FLAG_BRS;
   }
 
-  frame->timestamp = (uint16_t)(word1 & RX_ELEMENT_TS_MASK);
-  frame->dlc = (uint8_t)((word1 & RX_ELEMENT_DLC_MASK) >> 16);
+  frame->can_dlc = (uint8_t)((word1 & RX_ELEMENT_DLC_MASK) >> 16);
   memset(frame->data, 0, sizeof(frame->data));
 
-  if ((frame->flags & CAN_FRAME_FLAG_RTR) != 0U)
+  if ((word0 & RX_ELEMENT_RTR_MASK) != 0U)
   {
     length = 0U;
   }
-  else if ((frame->flags & CAN_FRAME_FLAG_FD) != 0U)
+  else if ((word1 & RX_ELEMENT_FDF_MASK) != 0U)
   {
-    length = CAN_DlcToLength(frame->dlc);
+    length = CAN_DlcToLength(frame->can_dlc);
   }
   else
   {
-    length = (frame->dlc <= 8U) ? frame->dlc : 8U;
+    length = (frame->can_dlc <= 8U) ? frame->can_dlc : 8U;
   }
 
   for (i = 0U; i < length; i++)
@@ -236,7 +236,7 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
 
 static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
 {
-  CAN_SnifferFrame frame;
+  GS_USB_HostFrame frame;
   uint32_t fifo_status;
   uint32_t fill;
 

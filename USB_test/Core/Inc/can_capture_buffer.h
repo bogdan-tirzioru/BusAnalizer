@@ -26,8 +26,13 @@ enum
 };
 
 void CAN_CaptureBuffer_Init(void);
-bool CAN_CaptureBuffer_Push(const CAN_SnifferFrame *frame);
-bool CAN_CaptureBuffer_Pop(CAN_SnifferFrame *frame);
+/* The producer fills the returned slot before CommitPush(). The consumer may
+ * inspect Peek() until Release() advances the queue. */
+CAN_SnifferFrame *CAN_CaptureBuffer_BeginPush(void);
+void CAN_CaptureBuffer_CommitPush(void);
+void CAN_CaptureBuffer_RecordDrop(void);
+const CAN_SnifferFrame *CAN_CaptureBuffer_Peek(void);
+void CAN_CaptureBuffer_Release(void);
 void CAN_CaptureBuffer_Clear(void);
 uint32_t CAN_CaptureBuffer_GetCount(void);
 uint32_t CAN_CaptureBuffer_GetFree(void);

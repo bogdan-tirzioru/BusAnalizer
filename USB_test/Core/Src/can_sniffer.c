@@ -165,7 +165,7 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
   uint32_t word0;
   uint32_t word1;
   uint8_t length;
-  uint32_t i;
+  uint8_t stored_length;
 
   fifo_status = ctx->hfdcan->Instance->RXF0S;
   if ((fifo_status & FDCAN_RXF0S_F0FL) == 0U)
@@ -210,24 +210,30 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
 
   frame->timestamp = (uint16_t)(word1 & RX_ELEMENT_TS_MASK);
   frame->dlc = (uint8_t)((word1 & RX_ELEMENT_DLC_MASK) >> 16);
-  memset(frame->data, 0, sizeof(frame->data));
 
   if ((frame->flags & CAN_FRAME_FLAG_RTR) != 0U)
   {
     length = 0U;
+    stored_length = 0U;
   }
   else if ((frame->flags & CAN_FRAME_FLAG_FD) != 0U)
   {
     length = CAN_DlcToLength(frame->dlc);
+    stored_length = sizeof(frame->data);
   }
   else
   {
     length = (frame->dlc <= 8U) ? frame->dlc : 8U;
+    stored_length = 8U;
   }
 
-  for (i = 0U; i < length; i++)
+  if (length != 0U)
   {
-    frame->data[i] = ((uint8_t *)&element[2])[i];
+    (void)memcpy(frame->data, &element[2], length);
+  }
+  if (length < stored_length)
+  {
+    (void)memset(&frame->data[length], 0, stored_length - length);
   }
 
   ctx->hfdcan->Instance->RXF0A = get_index;
@@ -236,9 +242,11 @@ static bool CAN_ReadFifo0Direct(CAN_SnifferChannel *ctx,
 
 static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
 {
-  CAN_SnifferFrame frame;
+  CAN_SnifferFrame discarded_frame;
+  CAN_SnifferFrame *frame;
   uint32_t fifo_status;
   uint32_t fill;
+  bool buffer_full;
 
   if (!ctx->hardware_started)
   {
@@ -260,7 +268,20 @@ static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
 
   while ((ctx->hfdcan->Instance->RXF0S & FDCAN_RXF0S_F0FL) != 0U)
   {
-    if (!CAN_ReadFifo0Direct(ctx, &frame))
+    frame = &discarded_frame;
+    buffer_full = false;
+
+    if (ctx->capture_running)
+    {
+      frame = CAN_CaptureBuffer_BeginPush();
+      if (frame == NULL)
+      {
+        frame = &discarded_frame;
+        buffer_full = true;
+      }
+    }
+
+    if (!CAN_ReadFifo0Direct(ctx, frame))
     {
       ctx->read_errors++;
       break;
@@ -269,7 +290,14 @@ static void CAN_ProcessChannel(CAN_SnifferChannel *ctx)
     ctx->rx_frames++;
     if (ctx->capture_running)
     {
-      (void)CAN_CaptureBuffer_Push(&frame);
+      if (buffer_full)
+      {
+        CAN_CaptureBuffer_RecordDrop();
+      }
+      else
+      {
+        CAN_CaptureBuffer_CommitPush();
+      }
     }
   }
 }

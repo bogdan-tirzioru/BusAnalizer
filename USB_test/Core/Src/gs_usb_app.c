@@ -47,7 +47,7 @@ void GS_USB_App_Init(void)
 
 void GS_USB_App_Task(void)
 {
-  CAN_SnifferFrame frame;
+  const CAN_SnifferFrame *frame;
   uint32_t now = HAL_GetTick();
   uint32_t can1_frames;
   uint32_t can2_frames;
@@ -73,37 +73,42 @@ void GS_USB_App_Task(void)
   }
 
   while ((USBD_GS_USB_TxSlotsAvailable(&hUsbDeviceHS) != 0U) &&
-         CAN_CaptureBuffer_Pop(&frame))
+         ((frame = CAN_CaptureBuffer_Peek()) != NULL))
   {
     GS_USB_HostFrame *tx_frame = &tx_frames[tx_fill_index];
     uint32_t usb_length = GS_USB_CLASSIC_HOST_FRAME_SIZE;
 
-    (void)memset(tx_frame, 0, sizeof(*tx_frame));
     tx_frame->echo_id = GS_HOST_FRAME_ECHO_ID_RX;
-    tx_frame->can_id = GS_USB_EncodeCanId(&frame);
-    tx_frame->can_dlc = frame.dlc & 0x0FU;
+    tx_frame->can_id = GS_USB_EncodeCanId(frame);
+    tx_frame->can_dlc = frame->dlc & 0x0FU;
     tx_frame->channel =
-        ((frame.flags & CAN_FRAME_FLAG_CHANNEL_1) != 0U) ? 1U : 0U;
+        ((frame->flags & CAN_FRAME_FLAG_CHANNEL_1) != 0U) ? 1U : 0U;
+    tx_frame->flags = 0U;
+    tx_frame->reserved = 0U;
 
-    if ((frame.flags & CAN_FRAME_FLAG_FD) != 0U)
+    if ((frame->flags & CAN_FRAME_FLAG_FD) != 0U)
     {
       tx_frame->flags |= GS_CAN_FLAG_FD;
       usb_length = GS_USB_FD_HOST_FRAME_SIZE;
 
-      if ((frame.flags & CAN_FRAME_FLAG_BRS) != 0U)
+      if ((frame->flags & CAN_FRAME_FLAG_BRS) != 0U)
       {
         tx_frame->flags |= GS_CAN_FLAG_BRS;
       }
-      if ((frame.flags & CAN_FRAME_FLAG_ESI) != 0U)
+      if ((frame->flags & CAN_FRAME_FLAG_ESI) != 0U)
       {
         tx_frame->flags |= GS_CAN_FLAG_ESI;
       }
     }
 
-    if ((frame.flags & CAN_FRAME_FLAG_RTR) == 0U)
+    if ((frame->flags & CAN_FRAME_FLAG_RTR) == 0U)
     {
-      (void)memcpy(tx_frame->data, frame.data,
-                   ((frame.flags & CAN_FRAME_FLAG_FD) != 0U) ? 64U : 8U);
+      (void)memcpy(tx_frame->data, frame->data,
+                   ((frame->flags & CAN_FRAME_FLAG_FD) != 0U) ? 64U : 8U);
+    }
+    else
+    {
+      (void)memset(tx_frame->data, 0, 8U);
     }
 
     if (USBD_GS_USB_Transmit(&hUsbDeviceHS,
@@ -112,6 +117,7 @@ void GS_USB_App_Task(void)
     {
       break;
     }
+    CAN_CaptureBuffer_Release();
     tx_fill_index ^= 1U;
   }
 

@@ -1,6 +1,6 @@
 #include "can_capture_buffer.h"
 
-#include <string.h>
+#include <stddef.h>
 
 _Static_assert(sizeof(CAN_SnifferFrame) == 72U,
                "CAN_SnifferFrame CAN FD ABI mismatch");
@@ -16,32 +16,39 @@ void CAN_CaptureBuffer_Init(void)
   dropped_frames = 0U;
 }
 
-bool CAN_CaptureBuffer_Push(const CAN_SnifferFrame *frame)
+CAN_SnifferFrame *CAN_CaptureBuffer_BeginPush(void)
 {
-  if ((frame == NULL) || ((write_sequence - read_sequence) >= CAN_CAPTURE_CAPACITY))
+  if ((write_sequence - read_sequence) >= CAN_CAPTURE_CAPACITY)
   {
-    if (frame != NULL)
-    {
-      dropped_frames++;
-    }
-    return false;
+    return NULL;
   }
 
-  capture_buffer[write_sequence & (CAN_CAPTURE_CAPACITY - 1U)] = *frame;
-  write_sequence++;
-  return true;
+  return &capture_buffer[write_sequence & (CAN_CAPTURE_CAPACITY - 1U)];
 }
 
-bool CAN_CaptureBuffer_Pop(CAN_SnifferFrame *frame)
+void CAN_CaptureBuffer_CommitPush(void)
 {
-  if ((frame == NULL) || (read_sequence == write_sequence))
+  write_sequence++;
+}
+
+void CAN_CaptureBuffer_RecordDrop(void)
+{
+  dropped_frames++;
+}
+
+const CAN_SnifferFrame *CAN_CaptureBuffer_Peek(void)
+{
+  if (read_sequence == write_sequence)
   {
-    return false;
+    return NULL;
   }
 
-  *frame = capture_buffer[read_sequence & (CAN_CAPTURE_CAPACITY - 1U)];
+  return &capture_buffer[read_sequence & (CAN_CAPTURE_CAPACITY - 1U)];
+}
+
+void CAN_CaptureBuffer_Release(void)
+{
   read_sequence++;
-  return true;
 }
 
 void CAN_CaptureBuffer_Clear(void)

@@ -24,7 +24,34 @@ static uint16_t logger_lengths[LOGGER_QUEUE_CAPACITY];
 static volatile uint32_t logger_write_sequence;
 static volatile uint32_t logger_read_sequence;
 static volatile uint32_t logger_dropped_messages;
+static volatile uint32_t logger_itm_dropped_characters;
 static volatile uint8_t logger_tx_busy;
+static volatile uint8_t logger_itm_enabled;
+
+static void Logger_WriteItm(const uint8_t *message, size_t length)
+{
+  size_t index;
+
+  if ((logger_itm_enabled == 0U) ||
+      ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U) ||
+      ((ITM->TCR & ITM_TCR_ITMENA_Msk) == 0U) ||
+      ((ITM->TER & 1UL) == 0U))
+  {
+    return;
+  }
+
+  for (index = 0U; index < length; index++)
+  {
+    /* Do not wait for the stimulus port: logging must not delay CAN or USB. */
+    if (ITM->PORT[0U].u32 == 0U)
+    {
+      logger_itm_dropped_characters += (uint32_t)(length - index);
+      return;
+    }
+
+    (void)ITM_SendChar((uint32_t)message[index]);
+  }
+}
 
 static void Logger_StartNext(void)
 {
@@ -90,6 +117,8 @@ static void Logger_Queue(const uint8_t *message, size_t length)
     length = LOGGER_BUFFER_SIZE;
   }
 
+  Logger_WriteItm(message, length);
+
   write_sequence = logger_write_sequence;
   if ((write_sequence - logger_read_sequence) >= LOGGER_QUEUE_CAPACITY)
   {
@@ -142,7 +171,14 @@ void Logger_Init(UART_HandleTypeDef *uart)
   logger_write_sequence = 0U;
   logger_read_sequence = 0U;
   logger_dropped_messages = 0U;
+  logger_itm_dropped_characters = 0U;
   logger_tx_busy = 0U;
+  logger_itm_enabled = 0U;
+}
+
+void Logger_SetItmEnabled(uint8_t enabled)
+{
+  logger_itm_enabled = (enabled != 0U) ? 1U : 0U;
 }
 
 void Logger_Write(const char *message)
@@ -188,6 +224,11 @@ void Logger_Printf(const char *format, ...)
 uint32_t Logger_GetDroppedCount(void)
 {
   return logger_dropped_messages;
+}
+
+uint32_t Logger_GetItmDroppedCount(void)
+{
+  return logger_itm_dropped_characters;
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *uart)

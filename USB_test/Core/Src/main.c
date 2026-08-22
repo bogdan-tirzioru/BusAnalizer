@@ -367,6 +367,7 @@ static void MX_USART1_UART_Init(void)
   }
   /* USER CODE BEGIN USART1_Init 2 */
   Logger_Init(&huart1);
+  Logger_SetItmEnabled(1U);
   Logger_Write("\r\nUSB_test starting\r\n");
   Logger_Printf("CPU clock: %lu Hz\r\n",
                 (unsigned long)HAL_RCC_GetSysClockFreq());

@@ -366,13 +366,14 @@ static uint8_t USBD_GS_USB_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
   uint8_t *next_buffer;
   uint32_t next_length;
+  uint32_t completed_length;
 
   if ((epnum & 0x0FU) != (GS_USB_IN_EP & 0x0FU))
   {
     return (uint8_t)USBD_FAIL;
   }
 
-  GS_USB_Stats_RecordTransferCompleted(gs_handle.tx_length);
+  completed_length = gs_handle.tx_length;
 
   if (gs_handle.tx_pending != 0U)
   {
@@ -382,20 +383,23 @@ static uint8_t USBD_GS_USB_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
     gs_handle.tx_length = next_length;
     gs_handle.tx_pending = 0U;
 
-    /* Keep the endpoint busy and launch the queued frame from the completion
-     * callback. This removes one main-loop round trip between USB transfers. */
+    /* Rearm EP1 before statistics bookkeeping so the host sees the next
+     * transfer as early as possible after the completion interrupt. */
     if (USBD_LL_Transmit(pdev, GS_USB_IN_EP,
                          next_buffer, next_length) != USBD_OK)
     {
       gs_handle.tx_busy = 0U;
+      GS_USB_Stats_RecordTransferCompleted(completed_length);
       GS_USB_Stats_RecordEndpointIdle();
       return (uint8_t)USBD_FAIL;
     }
+    GS_USB_Stats_RecordTransferCompleted(completed_length);
     GS_USB_Stats_RecordTransferStarted();
   }
   else
   {
     gs_handle.tx_busy = 0U;
+    GS_USB_Stats_RecordTransferCompleted(completed_length);
     GS_USB_Stats_RecordEndpointIdle();
   }
   return (uint8_t)USBD_OK;

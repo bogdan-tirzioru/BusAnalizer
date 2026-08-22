@@ -5,11 +5,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LOGGER_BUFFER_SIZE   320U
-#define LOGGER_QUEUE_CAPACITY 4U
+#define LOGGER_BUFFER_SIZE        320U
+#define LOGGER_QUEUE_CAPACITY     4U
+#define LOGGER_ITM_BUFFER_SIZE    1024U
+#define LOGGER_ITM_DRAIN_BUDGET   16U
 
 _Static_assert((LOGGER_QUEUE_CAPACITY & (LOGGER_QUEUE_CAPACITY - 1U)) == 0U,
                "logger queue capacity must be a power of two");
+_Static_assert((LOGGER_ITM_BUFFER_SIZE & (LOGGER_ITM_BUFFER_SIZE - 1U)) == 0U,
+               "logger ITM buffer size must be a power of two");
 
 #if defined(__GNUC__)
 #define LOGGER_DMA_ALIGNED __attribute__((aligned(32)))
@@ -21,36 +25,61 @@ static UART_HandleTypeDef *logger_uart;
 static uint8_t logger_buffers[LOGGER_QUEUE_CAPACITY][LOGGER_BUFFER_SIZE]
     LOGGER_DMA_ALIGNED;
 static uint16_t logger_lengths[LOGGER_QUEUE_CAPACITY];
+static uint8_t logger_itm_buffer[LOGGER_ITM_BUFFER_SIZE];
 static volatile uint32_t logger_write_sequence;
 static volatile uint32_t logger_read_sequence;
 static volatile uint32_t logger_dropped_messages;
 static volatile uint32_t logger_itm_dropped_characters;
+static volatile uint32_t logger_itm_write_sequence;
+static volatile uint32_t logger_itm_read_sequence;
 static volatile uint8_t logger_tx_busy;
 static volatile uint8_t logger_itm_enabled;
 
+static uint8_t Logger_ItmTraceActive(void)
+{
+  return ((logger_itm_enabled != 0U) &&
+          ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) != 0U) &&
+          ((ITM->TCR & ITM_TCR_ITMENA_Msk) != 0U) &&
+          ((ITM->TER & 1UL) != 0U)) ? 1U : 0U;
+}
+
 static void Logger_WriteItm(const uint8_t *message, size_t length)
 {
-  size_t index;
+  uint32_t write_sequence;
+  uint32_t index;
+  size_t first_length;
 
-  if ((logger_itm_enabled == 0U) ||
-      ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U) ||
-      ((ITM->TCR & ITM_TCR_ITMENA_Msk) == 0U) ||
-      ((ITM->TER & 1UL) == 0U))
+  if (Logger_ItmTraceActive() == 0U)
   {
     return;
   }
 
-  for (index = 0U; index < length; index++)
+  write_sequence = logger_itm_write_sequence;
+  if (length >
+      (size_t)(LOGGER_ITM_BUFFER_SIZE -
+               (write_sequence - logger_itm_read_sequence)))
   {
-    /* Do not wait for the stimulus port: logging must not delay CAN or USB. */
-    if (ITM->PORT[0U].u32 == 0U)
-    {
-      logger_itm_dropped_characters += (uint32_t)(length - index);
-      return;
-    }
-
-    (void)ITM_SendChar((uint32_t)message[index]);
+    /* Drop complete messages so a full buffer cannot create broken lines. */
+    logger_itm_dropped_characters += (uint32_t)length;
+    return;
   }
+
+  index = write_sequence & (LOGGER_ITM_BUFFER_SIZE - 1U);
+  first_length = LOGGER_ITM_BUFFER_SIZE - index;
+  if (first_length > length)
+  {
+    first_length = length;
+  }
+
+  (void)memcpy(&logger_itm_buffer[index], message, first_length);
+  if (length > first_length)
+  {
+    (void)memcpy(logger_itm_buffer, &message[first_length],
+                 length - first_length);
+  }
+
+  __DMB();
+  logger_itm_write_sequence = write_sequence + (uint32_t)length;
 }
 
 static void Logger_StartNext(void)
@@ -172,6 +201,8 @@ void Logger_Init(UART_HandleTypeDef *uart)
   logger_read_sequence = 0U;
   logger_dropped_messages = 0U;
   logger_itm_dropped_characters = 0U;
+  logger_itm_write_sequence = 0U;
+  logger_itm_read_sequence = 0U;
   logger_tx_busy = 0U;
   logger_itm_enabled = 0U;
 }
@@ -179,6 +210,35 @@ void Logger_Init(UART_HandleTypeDef *uart)
 void Logger_SetItmEnabled(uint8_t enabled)
 {
   logger_itm_enabled = (enabled != 0U) ? 1U : 0U;
+  if (logger_itm_enabled == 0U)
+  {
+    logger_itm_read_sequence = logger_itm_write_sequence;
+  }
+}
+
+void Logger_Process(void)
+{
+  uint32_t budget = LOGGER_ITM_DRAIN_BUDGET;
+
+  if (Logger_ItmTraceActive() == 0U)
+  {
+    return;
+  }
+
+  while ((budget != 0U) &&
+         (logger_itm_read_sequence != logger_itm_write_sequence))
+  {
+    if (ITM->PORT[0U].u32 == 0U)
+    {
+      return;
+    }
+
+    (void)ITM_SendChar(
+        (uint32_t)logger_itm_buffer[logger_itm_read_sequence &
+                                    (LOGGER_ITM_BUFFER_SIZE - 1U)]);
+    logger_itm_read_sequence++;
+    budget--;
+  }
 }
 
 void Logger_Write(const char *message)

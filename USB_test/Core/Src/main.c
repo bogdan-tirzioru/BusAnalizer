@@ -128,6 +128,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
     CAN_Sniffer_Process();
     GS_USB_App_Task();
+    Logger_Process();
 
   }
   /* USER CODE END 3 */

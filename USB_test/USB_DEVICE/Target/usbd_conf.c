@@ -114,6 +114,70 @@ static HAL_StatusTypeDef USBD_LL_TransmitWithGsUsbPreload(
     uint32_t length)
 {
   HAL_StatusTypeDef status;
+  uint32_t USBx_BASE;
+  PCD_EPTypeDef *ep;
+  uint32_t epnum;
+  uint32_t length_words;
+  uint32_t packet_count;
+  uint32_t primask;
+  uint32_t word;
+  uint8_t *fifo_buffer;
+
+  if ((hpcd != NULL) && (buffer != NULL) &&
+      (ep_addr == GS_USB_FAST_IN_EP) && (length != 0U) &&
+      (hpcd->Init.dma_enable == 0U))
+  {
+    USBx_BASE = (uint32_t)hpcd->Instance;
+    epnum = ep_addr & EP_ADDR_MSK;
+    ep = &hpcd->IN_ep[epnum];
+    length_words = (length + 3U) / 4U;
+
+    if ((ep->maxpacket != 0U) &&
+        (length <= (2U * ep->maxpacket)) &&
+        ((USBx_INEP(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >=
+         length_words))
+    {
+      packet_count = (length > ep->maxpacket) ? 2U : 1U;
+      primask = __get_PRIMASK();
+      __disable_irq();
+
+      /*
+       * EP1 only carries one 20-byte classic or 76-byte CAN FD gs_usb record.
+       * Program its non-DMA bulk transfer directly and preload the complete
+       * FIFO without enabling the generic TX-FIFO-empty interrupt.
+       */
+      ep->xfer_buff = buffer;
+      ep->xfer_len = length;
+      ep->xfer_count = 0U;
+      ep->is_in = 1U;
+      ep->num = (uint8_t)epnum;
+
+      USBx_DEVICE->DIEPEMPMSK &= ~(1UL << epnum);
+      USBx_INEP(epnum)->DIEPTSIZ =
+          (USBx_INEP(epnum)->DIEPTSIZ &
+           ~(USB_OTG_DIEPTSIZ_XFRSIZ | USB_OTG_DIEPTSIZ_PKTCNT)) |
+          (length & USB_OTG_DIEPTSIZ_XFRSIZ) |
+          ((packet_count << 19U) & USB_OTG_DIEPTSIZ_PKTCNT);
+      USBx_INEP(epnum)->DIEPCTL |=
+          USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA;
+
+      fifo_buffer = buffer;
+      for (word = 0U; word < length_words; word++)
+      {
+        USBx_DFIFO(epnum) = __UNALIGNED_UINT32_READ(fifo_buffer);
+        fifo_buffer += 4U;
+      }
+      ep->xfer_buff += length;
+      ep->xfer_count = length;
+
+      if (primask == 0U)
+      {
+        __enable_irq();
+      }
+      GS_USB_Stats_RecordFifoPreload(1U);
+      return HAL_OK;
+    }
+  }
 
   status = HAL_PCD_EP_Transmit(hpcd, ep_addr, buffer, length);
   if (status == HAL_OK)

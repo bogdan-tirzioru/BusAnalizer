@@ -1,5 +1,7 @@
 #include "logger.h"
 
+#include "SEGGER_RTT.h"
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,6 +26,7 @@ static uint16_t logger_lengths[LOGGER_QUEUE_CAPACITY];
 static volatile uint32_t logger_write_sequence;
 static volatile uint32_t logger_read_sequence;
 static volatile uint32_t logger_dropped_messages;
+static volatile uint32_t logger_rtt_dropped_messages;
 static volatile uint8_t logger_tx_busy;
 
 static void Logger_StartNext(void)
@@ -80,6 +83,7 @@ static void Logger_Queue(const uint8_t *message, size_t length)
 {
   uint32_t write_sequence;
   uint32_t index;
+  unsigned rtt_written;
 
   if ((logger_uart == NULL) || (message == NULL) || (length == 0U))
   {
@@ -88,6 +92,12 @@ static void Logger_Queue(const uint8_t *message, size_t length)
   if (length > LOGGER_BUFFER_SIZE)
   {
     length = LOGGER_BUFFER_SIZE;
+  }
+
+  rtt_written = SEGGER_RTT_Write(0U, message, (unsigned)length);
+  if (rtt_written != (unsigned)length)
+  {
+    logger_rtt_dropped_messages++;
   }
 
   write_sequence = logger_write_sequence;
@@ -138,10 +148,14 @@ static void Logger_CompleteActive(UART_HandleTypeDef *uart, uint8_t failed)
 
 void Logger_Init(UART_HandleTypeDef *uart)
 {
+  SEGGER_RTT_Init();
+  (void)SEGGER_RTT_SetFlagsUpBuffer(0U, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+
   logger_uart = uart;
   logger_write_sequence = 0U;
   logger_read_sequence = 0U;
   logger_dropped_messages = 0U;
+  logger_rtt_dropped_messages = 0U;
   logger_tx_busy = 0U;
 }
 
@@ -188,6 +202,11 @@ void Logger_Printf(const char *format, ...)
 uint32_t Logger_GetDroppedCount(void)
 {
   return logger_dropped_messages;
+}
+
+uint32_t Logger_GetRttDroppedCount(void)
+{
+  return logger_rtt_dropped_messages;
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *uart)

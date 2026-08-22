@@ -134,7 +134,7 @@ void GS_USB_App_Task(void)
     max_completion_gap_us = GS_USB_Stats_CyclesToMicroseconds(
         usb_stats.max_completion_gap_cycles);
 
-    Logger_Printf("CAN1 %lu fps buf=%lu hi=%lu drop=%lu lost=%lu max=%lu | CAN2 %lu fps lost=%lu max=%lu | USB tx=%lu/%lu bytes=%lu idle=%lu gap=%luus pre=%lu/%lu logdrop=%lu\r\n",
+    Logger_Printf("CAN1 %lu fps buf=%lu hi=%lu drop=%lu lost=%lu max=%lu | CAN2 %lu fps lost=%lu max=%lu | USB tx=%lu/%lu bytes=%lu idle=%lu gap=%luus pre=%lu/%lu logdrop=%lu rttdrop=%lu\r\n",
                   (unsigned long)(can1_frames - last_logged_frames[0]),
                   (unsigned long)CAN_Sniffer_GetBufferedCount(),
                   (unsigned long)buffer_high_water,
@@ -151,7 +151,8 @@ void GS_USB_App_Task(void)
                   (unsigned long)max_completion_gap_us,
                   (unsigned long)usb_stats.fifo_preload_hits,
                   (unsigned long)usb_stats.fifo_preload_fallbacks,
-                  (unsigned long)Logger_GetDroppedCount());
+                  (unsigned long)Logger_GetDroppedCount(),
+                  (unsigned long)Logger_GetRttDroppedCount());
 
     last_logged_frames[0] = can1_frames;
     last_logged_frames[1] = can2_frames;

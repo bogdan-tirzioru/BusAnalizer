@@ -29,6 +29,7 @@ pipeline {
           extensions: [[$class: 'CloneOption', depth: 0, noTags: false, shallow: false]],
           userRemoteConfigs: [[
             url: env.REPOSITORY_URL,
+            credentialsId: 'github-bogdan-read',
             refspec: '+refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*'
           ]]
         ])

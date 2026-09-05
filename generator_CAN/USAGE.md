@@ -197,7 +197,9 @@ During a stress test, the generator periodically reports status similar to:
 
 ```text
 TXQ=... RX=... ADDERR=0 ... C1 TEC=0 REC=0 EP=0 BO=0 ... C2 TEC=0 REC=0 EP=0 BO=0 ...
-GENCHK ... seqErr=0 gap=0 back=0 idErr=0 dlcErr=0 hdrErr=0 payErr=0 fifoLost=0 maxFIFO=...
+GENX RUN tx=... rx=... d=... next=... ok=... bad=0
+SEQ first=0 last=... err=0 miss=0 dup=0 back=0 fut=0
+RX id=0 dlc=0 hdr=0 esi=0 pf=0 pb=0 read=0 lost=0 max=...
 ```
 
 A healthy generator should keep these at zero:
@@ -208,18 +210,28 @@ TEC
 REC
 EP
 BO
-seqErr
-gap
+err
+miss
+dup
 back
-idErr
-dlcErr
-hdrErr
-payErr
-fifoLost
+fut
+id
+dlc
+hdr
+esi
+pf
+pb
+read
+lost
 ```
 
-`maxFIFO` is informational. `LEC=7` can appear during normal operation; use the
-actual error and validation counters above to judge generator health.
+`max` is informational. While traffic is active, `GENX RUN` means the checks
+are clean and some frames remain in flight. Enter `0` and wait for `GENX PASS`
+to prove exact TX/RX reconciliation. `GENX FAIL` also prints the first/latest
+bad-frame snapshot and the last receive-side FDCAN protocol-error registers.
+
+`LEC=7` can appear during normal operation. The fast receive-side monitor
+consumes the LEC/DLEC change latches and preserves real errors in `PROTO`.
 
 ## Recommended throughput sweep
 

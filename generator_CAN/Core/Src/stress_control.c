@@ -116,7 +116,10 @@ static void StressControl_PrintHelp(void)
         "  can fd 500k 5m\r\n"
         "  can fd 1m 2m\r\n"
         "  can fd 1m 5m\r\n"
-        "  can status\r\n");
+        "  can status\r\n"
+        "Cross-check: enter 0, then wait for GENX PASS.\r\n"
+        "Bad w bits: seq=01 future=02 id=04 dlc=08 "
+        "header=10 esi=20 payload=40\r\n");
 }
 
 static void StressControl_SetLevel(uint32_t percent)

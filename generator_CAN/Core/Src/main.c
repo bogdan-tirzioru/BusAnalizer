@@ -26,7 +26,20 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct
+{
+  uint32_t reasons;
+  uint32_t expected_counter;
+  uint32_t received_counter;
+  uint32_t tx_queued;
+  uint32_t rx_count;
+  uint32_t identifier;
+  uint32_t dlc;
+  uint32_t bad_byte_index;
+  uint8_t bad_byte_expected;
+  uint8_t bad_byte_received;
+  uint8_t data[8];
+} GeneratorCanBadSnapshot;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -35,6 +48,16 @@
 #define GENERATOR_CAN_BITRATE_1M   1000000UL
 #define GENERATOR_CAN_DBITRATE_2M  2000000UL
 #define GENERATOR_CAN_DBITRATE_5M  5000000UL
+
+#define GENERATOR_BAD_SEQUENCE  (1U << 0)
+#define GENERATOR_BAD_FUTURE    (1U << 1)
+#define GENERATOR_BAD_ID        (1U << 2)
+#define GENERATOR_BAD_DLC       (1U << 3)
+#define GENERATOR_BAD_HEADER    (1U << 4)
+#define GENERATOR_BAD_ESI       (1U << 5)
+#define GENERATOR_BAD_PAYLOAD   (1U << 6)
+
+#define GENERATOR_PROTOCOL_IR_MASK  (FDCAN_IR_PEA | FDCAN_IR_PED)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -84,21 +107,35 @@ static uint32_t can_rx_expected_counter = 0U;
 static uint32_t can_rx_first_counter = 0U;
 static uint32_t can_rx_last_counter = 0U;
 
+static uint32_t can_rx_good_frames = 0U;
+static uint32_t can_rx_bad_frames = 0U;
 static uint32_t can_rx_sequence_errors = 0U;
-static uint32_t can_rx_forward_gap_frames = 0U;
+static uint32_t can_rx_missing_frames = 0U;
+static uint32_t can_rx_duplicate_events = 0U;
 static uint32_t can_rx_backward_events = 0U;
+static uint32_t can_rx_future_events = 0U;
 static uint32_t can_rx_id_errors = 0U;
 static uint32_t can_rx_dlc_errors = 0U;
 static uint32_t can_rx_header_errors = 0U;
+static uint32_t can_rx_esi_errors = 0U;
 static uint32_t can_rx_payload_errors = 0U;
+static uint32_t can_rx_payload_byte_errors = 0U;
+static uint32_t can_rx_read_errors = 0U;
 static uint32_t can_rx_fifo_lost_events = 0U;
 static uint32_t can_rx_max_fifo_fill = 0U;
 
-static uint32_t can_rx_last_bad_expected = 0U;
-static uint32_t can_rx_last_bad_counter = 0U;
-static uint32_t can_rx_last_bad_id = 0U;
-static uint32_t can_rx_last_bad_dlc = 0U;
-static uint8_t can_rx_last_bad_data[64] = {0U};
+static GeneratorCanBadSnapshot can_rx_first_bad = {0};
+static GeneratorCanBadSnapshot can_rx_last_bad = {0};
+
+static uint32_t can_rx_protocol_events = 0U;
+static uint32_t can_rx_protocol_lec_events = 0U;
+static uint32_t can_rx_protocol_dlec_events = 0U;
+static uint32_t can_rx_protocol_ir_events = 0U;
+static uint32_t can_rx_protocol_last_psr = 0U;
+static uint32_t can_rx_protocol_last_ecr = 0U;
+static uint32_t can_rx_protocol_last_ir = 0U;
+static uint32_t can_rx_protocol_last_tx = 0U;
+static uint32_t can_rx_protocol_last_rx = 0U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -113,6 +150,20 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 static void Generator_CAN_ConfigureTxHeader(void);
 static void Generator_CAN_ResetStatistics(void);
+static uint8_t Generator_CAN_CounterIsAfter(uint32_t value,
+                                            uint32_t reference);
+static void Generator_CAN_SaveBadSnapshot(
+    GeneratorCanBadSnapshot *snapshot,
+    uint32_t reasons,
+    uint32_t expected_counter,
+    uint32_t received_counter,
+    uint32_t tx_queued,
+    const FDCAN_RxHeaderTypeDef *header,
+    const uint8_t *data,
+    uint32_t bad_byte_index,
+    uint8_t bad_byte_expected,
+    uint8_t bad_byte_received);
+static void Generator_CAN_MonitorRxProtocol(void);
 static HAL_StatusTypeDef Generator_CAN_ConfigureHandle(
     FDCAN_HandleTypeDef *hfdcan,
     uint8_t can_fd,
@@ -158,10 +209,92 @@ static void Generator_CAN_ConfigureTxHeader(void)
   txHeader.MessageMarker = 0U;
 }
 
-static void Generator_CAN_ResetStatistics(void)
+static uint8_t Generator_CAN_CounterIsAfter(uint32_t value,
+                                            uint32_t reference)
+{
+  uint32_t distance = value - reference;
+
+  return ((distance != 0U) && (distance < 0x80000000U)) ? 1U : 0U;
+}
+
+static void Generator_CAN_SaveBadSnapshot(
+    GeneratorCanBadSnapshot *snapshot,
+    uint32_t reasons,
+    uint32_t expected_counter,
+    uint32_t received_counter,
+    uint32_t tx_queued,
+    const FDCAN_RxHeaderTypeDef *header,
+    const uint8_t *data,
+    uint32_t bad_byte_index,
+    uint8_t bad_byte_expected,
+    uint8_t bad_byte_received)
 {
   uint32_t i;
 
+  snapshot->reasons = reasons;
+  snapshot->expected_counter = expected_counter;
+  snapshot->received_counter = received_counter;
+  snapshot->tx_queued = tx_queued;
+  snapshot->rx_count = can_rx_count;
+  snapshot->identifier = header->Identifier;
+  snapshot->dlc = header->DataLength;
+  snapshot->bad_byte_index = bad_byte_index;
+  snapshot->bad_byte_expected = bad_byte_expected;
+  snapshot->bad_byte_received = bad_byte_received;
+
+  for (i = 0U; i < 8U; i++)
+  {
+    snapshot->data[i] = data[i];
+  }
+}
+
+static void Generator_CAN_MonitorRxProtocol(void)
+{
+  uint32_t psr = hfdcan2.Instance->PSR;
+  uint32_t ecr = hfdcan2.Instance->ECR;
+  uint32_t ir = hfdcan2.Instance->IR & GENERATOR_PROTOCOL_IR_MASK;
+  uint32_t lec = (psr & FDCAN_PSR_LEC) >> FDCAN_PSR_LEC_Pos;
+  uint32_t dlec = (psr & FDCAN_PSR_DLEC) >> FDCAN_PSR_DLEC_Pos;
+  uint8_t lec_error = 0U;
+  uint8_t dlec_error = 0U;
+
+  /* Reading PSR consumes the LEC/DLEC change latches.  Poll them in the hot
+   * loop so short receive-side protocol errors are retained in our counters. */
+  if ((lec != FDCAN_PROTOCOL_ERROR_NONE) &&
+      (lec != FDCAN_PROTOCOL_ERROR_NO_CHANGE))
+  {
+    lec_error = 1U;
+  }
+
+  if ((dlec != FDCAN_PROTOCOL_ERROR_NONE) &&
+      (dlec != FDCAN_PROTOCOL_ERROR_NO_CHANGE))
+  {
+    dlec_error = 1U;
+  }
+
+  if ((lec_error != 0U) || (dlec_error != 0U) || (ir != 0U))
+  {
+    can_rx_protocol_events++;
+    can_rx_protocol_lec_events += lec_error;
+    can_rx_protocol_dlec_events += dlec_error;
+    can_rx_protocol_ir_events += (ir != 0U) ? 1U : 0U;
+    can_rx_protocol_last_psr = psr;
+    can_rx_protocol_last_ecr = ecr;
+    can_rx_protocol_last_ir = ir;
+    can_rx_protocol_last_tx = can_tx_count;
+    can_rx_protocol_last_rx = can_rx_count;
+
+    /* PEA/PED are sticky. Clear only the sampled flags so a later protocol
+     * episode is counted independently. */
+    if (ir != 0U)
+    {
+      hfdcan2.Instance->IR = ir;
+    }
+  }
+}
+
+static void Generator_CAN_ResetStatistics(void)
+{
   can_tx_count = 0U;
   can_rx_count = 0U;
   can_tx_error = 0U;
@@ -171,25 +304,41 @@ static void Generator_CAN_ResetStatistics(void)
   can_rx_first_counter = 0U;
   can_rx_last_counter = 0U;
 
+  can_rx_good_frames = 0U;
+  can_rx_bad_frames = 0U;
   can_rx_sequence_errors = 0U;
-  can_rx_forward_gap_frames = 0U;
+  can_rx_missing_frames = 0U;
+  can_rx_duplicate_events = 0U;
   can_rx_backward_events = 0U;
+  can_rx_future_events = 0U;
   can_rx_id_errors = 0U;
   can_rx_dlc_errors = 0U;
   can_rx_header_errors = 0U;
+  can_rx_esi_errors = 0U;
   can_rx_payload_errors = 0U;
+  can_rx_payload_byte_errors = 0U;
+  can_rx_read_errors = 0U;
   can_rx_fifo_lost_events = 0U;
   can_rx_max_fifo_fill = 0U;
 
-  can_rx_last_bad_expected = 0U;
-  can_rx_last_bad_counter = 0U;
-  can_rx_last_bad_id = 0U;
-  can_rx_last_bad_dlc = 0U;
+  can_rx_first_bad = (GeneratorCanBadSnapshot){0};
+  can_rx_last_bad = (GeneratorCanBadSnapshot){0};
+  can_rx_first_bad.bad_byte_index = 0xFFFFFFFFU;
+  can_rx_last_bad.bad_byte_index = 0xFFFFFFFFU;
 
-  for (i = 0U; i < 64U; i++)
-  {
-    can_rx_last_bad_data[i] = 0U;
-  }
+  can_rx_protocol_events = 0U;
+  can_rx_protocol_lec_events = 0U;
+  can_rx_protocol_dlec_events = 0U;
+  can_rx_protocol_ir_events = 0U;
+  can_rx_protocol_last_psr = 0U;
+  can_rx_protocol_last_ecr = 0U;
+  can_rx_protocol_last_ir = 0U;
+  can_rx_protocol_last_tx = 0U;
+  can_rx_protocol_last_rx = 0U;
+
+  /* Establish a clean receive-side protocol baseline before frame 0. */
+  (void)hfdcan2.Instance->PSR;
+  hfdcan2.Instance->IR = GENERATOR_PROTOCOL_IR_MASK;
 
   last_tx_tick = HAL_GetTick();
   last_report_tick = HAL_GetTick();
@@ -480,6 +629,7 @@ int main(void)
       Error_Handler();
   }
 
+  Generator_CAN_ResetStatistics();
   Generator_CAN_PrintStatus();
 
   /* USER CODE END 2 */
@@ -559,8 +709,13 @@ int main(void)
                   | ((uint32_t)rxData[2] << 16)
                   | ((uint32_t)rxData[3] << 24);
 
-              uint32_t expected_before = counter;
-              uint8_t bad = 0U;
+              uint32_t expected_before = can_rx_expected_counter;
+              uint32_t tx_queued_before = can_tx_count;
+              uint32_t tx_distance = tx_queued_before - counter;
+              uint32_t reasons = 0U;
+              uint32_t bad_byte_index = 0xFFFFFFFFU;
+              uint8_t bad_byte_expected = 0U;
+              uint8_t bad_byte_received = 0U;
               uint32_t expected_dlc = (generator_can_fd != 0U) ?
                                       FDCAN_DLC_BYTES_64 : FDCAN_DLC_BYTES_8;
               uint32_t expected_format = (generator_can_fd != 0U) ?
@@ -574,44 +729,63 @@ int main(void)
               {
                   can_rx_have_counter = 1U;
                   can_rx_first_counter = counter;
-                  can_rx_expected_counter = counter;
               }
 
-              expected_before = can_rx_expected_counter;
+              /* A received counter must refer to a frame already accepted by
+               * the TX queue.  Modular subtraction keeps this valid at wrap. */
+              if ((tx_distance == 0U) || (tx_distance >= 0x80000000U))
+              {
+                  can_rx_future_events++;
+                  reasons |= GENERATOR_BAD_FUTURE;
+              }
 
-              if (counter != expected_before)
+              if ((counter == expected_before) &&
+                  ((reasons & GENERATOR_BAD_FUTURE) == 0U))
+              {
+                  can_rx_expected_counter++;
+              }
+              else if (counter != expected_before)
               {
                   can_rx_sequence_errors++;
-                  bad = 1U;
+                  reasons |= GENERATOR_BAD_SEQUENCE;
 
-                  if (counter > expected_before)
+                  if ((reasons & GENERATOR_BAD_FUTURE) != 0U)
                   {
-                      can_rx_forward_gap_frames +=
-                          counter - expected_before;
+                      /* An impossible counter must not poison synchronisation. */
+                  }
+                  else if ((can_rx_count > 1U) &&
+                      (counter == can_rx_last_counter))
+                  {
+                      can_rx_duplicate_events++;
+                      /* A duplicate does not advance the expected counter. */
+                  }
+                  else if (Generator_CAN_CounterIsAfter(
+                               counter, expected_before) != 0U)
+                  {
+                      can_rx_missing_frames += counter - expected_before;
+                      can_rx_expected_counter = counter + 1U;
                   }
                   else
                   {
                       can_rx_backward_events++;
+                      /* Keep the expected counter so a late/stale frame does
+                       * not hide a subsequent valid frame. */
                   }
-
-                  /* Resynchronise so one event produces one sequence error. */
-                  can_rx_expected_counter = counter;
               }
 
-              can_rx_expected_counter++;
               can_rx_last_counter = counter;
 
               if ((rxHeader.Identifier != 0x100U) ||
                   (rxHeader.IdType != FDCAN_STANDARD_ID))
               {
                   can_rx_id_errors++;
-                  bad = 1U;
+                  reasons |= GENERATOR_BAD_ID;
               }
 
               if (rxHeader.DataLength != expected_dlc)
               {
                   can_rx_dlc_errors++;
-                  bad = 1U;
+                  reasons |= GENERATOR_BAD_DLC;
               }
 
               if ((rxHeader.RxFrameType != FDCAN_DATA_FRAME) ||
@@ -619,33 +793,77 @@ int main(void)
                   (rxHeader.BitRateSwitch != expected_brs))
               {
                   can_rx_header_errors++;
-                  bad = 1U;
+                  reasons |= GENERATOR_BAD_HEADER;
+              }
+
+              if (rxHeader.ErrorStateIndicator != FDCAN_ESI_ACTIVE)
+              {
+                  can_rx_esi_errors++;
+                  reasons |= GENERATOR_BAD_ESI;
               }
 
               for (uint32_t i = 4U; i < generator_payload_length; i++)
               {
-                  if (rxData[i] != (uint8_t)(counter + i))
+                  uint8_t expected_byte = (uint8_t)(counter + i);
+
+                  if (rxData[i] != expected_byte)
                   {
-                      can_rx_payload_errors++;
-                      bad = 1U;
-                      break;
+                      if ((reasons & GENERATOR_BAD_PAYLOAD) == 0U)
+                      {
+                          can_rx_payload_errors++;
+                          bad_byte_index = i;
+                          bad_byte_expected = expected_byte;
+                          bad_byte_received = rxData[i];
+                      }
+
+                      can_rx_payload_byte_errors++;
+                      reasons |= GENERATOR_BAD_PAYLOAD;
                   }
               }
 
-              if (bad != 0U)
+              if (reasons == 0U)
               {
-                  can_rx_last_bad_expected = expected_before;
-                  can_rx_last_bad_counter = counter;
-                  can_rx_last_bad_id = rxHeader.Identifier;
-                  can_rx_last_bad_dlc = rxHeader.DataLength;
+                  can_rx_good_frames++;
+              }
+              else
+              {
+                  can_rx_bad_frames++;
 
-                  for (uint32_t i = 0U; i < 64U; i++)
+                  if (can_rx_bad_frames == 1U)
                   {
-                      can_rx_last_bad_data[i] = rxData[i];
+                      Generator_CAN_SaveBadSnapshot(
+                          &can_rx_first_bad,
+                          reasons,
+                          expected_before,
+                          counter,
+                          tx_queued_before,
+                          &rxHeader,
+                          rxData,
+                          bad_byte_index,
+                          bad_byte_expected,
+                          bad_byte_received);
                   }
+
+                  Generator_CAN_SaveBadSnapshot(
+                      &can_rx_last_bad,
+                      reasons,
+                      expected_before,
+                      counter,
+                      tx_queued_before,
+                      &rxHeader,
+                      rxData,
+                      bad_byte_index,
+                      bad_byte_expected,
+                      bad_byte_received);
               }
           }
+          else
+          {
+              can_rx_read_errors++;
+          }
       }
+
+      Generator_CAN_MonitorRxProtocol();
 
       /* Print status once per second. */
       if ((now - last_report_tick) >= 1000)
@@ -701,23 +919,56 @@ int main(void)
                             status_len,
                             HAL_MAX_DELAY);
 
-          char check_msg[320];
+          char check_msg[384];
+          uint32_t crosscheck_errors =
+              can_rx_bad_frames +
+              can_rx_read_errors +
+              can_rx_fifo_lost_events +
+              can_rx_protocol_events;
+          const char *crosscheck_state;
+
+          if (crosscheck_errors != 0U)
+          {
+              crosscheck_state = "FAIL";
+          }
+          else if ((can_tx_count == can_rx_count) &&
+                   (can_rx_expected_counter == can_tx_count))
+          {
+              crosscheck_state = "PASS";
+          }
+          else
+          {
+              crosscheck_state = "RUN";
+          }
 
           int check_len = snprintf(
               check_msg,
               sizeof(check_msg),
-              "GENCHK first=%lu last=%lu seqErr=%lu gap=%lu back=%lu "
-              "idErr=%lu dlcErr=%lu hdrErr=%lu payErr=%lu "
-              "fifoLost=%lu maxFIFO=%lu\r\n",
+              "GENX %s tx=%lu rx=%lu d=%lu next=%lu ok=%lu bad=%lu\r\n"
+              "SEQ first=%lu last=%lu err=%lu miss=%lu dup=%lu back=%lu fut=%lu\r\n"
+              "RX id=%lu dlc=%lu hdr=%lu esi=%lu pf=%lu pb=%lu "
+              "read=%lu lost=%lu max=%lu\r\n",
+              crosscheck_state,
+              (unsigned long)can_tx_count,
+              (unsigned long)can_rx_count,
+              (unsigned long)(can_tx_count - can_rx_count),
+              (unsigned long)can_rx_expected_counter,
+              (unsigned long)can_rx_good_frames,
+              (unsigned long)can_rx_bad_frames,
               (unsigned long)can_rx_first_counter,
               (unsigned long)can_rx_last_counter,
               (unsigned long)can_rx_sequence_errors,
-              (unsigned long)can_rx_forward_gap_frames,
+              (unsigned long)can_rx_missing_frames,
+              (unsigned long)can_rx_duplicate_events,
               (unsigned long)can_rx_backward_events,
+              (unsigned long)can_rx_future_events,
               (unsigned long)can_rx_id_errors,
               (unsigned long)can_rx_dlc_errors,
               (unsigned long)can_rx_header_errors,
+              (unsigned long)can_rx_esi_errors,
               (unsigned long)can_rx_payload_errors,
+              (unsigned long)can_rx_payload_byte_errors,
+              (unsigned long)can_rx_read_errors,
               (unsigned long)can_rx_fifo_lost_events,
               (unsigned long)can_rx_max_fifo_fill);
 
@@ -726,27 +977,49 @@ int main(void)
                             check_len,
                             HAL_MAX_DELAY);
 
-          if ((can_rx_sequence_errors != 0U) ||
-              (can_rx_id_errors != 0U) ||
-              (can_rx_dlc_errors != 0U) ||
-              (can_rx_header_errors != 0U) ||
-              (can_rx_payload_errors != 0U))
+          if ((can_rx_bad_frames != 0U) ||
+              (can_rx_protocol_events != 0U))
           {
-              char detail_msg[320];
+              char detail_msg[384];
 
               int detail_len = snprintf(
                   detail_msg,
                   sizeof(detail_msg),
-                  "GENBAD exp=%lu got=%lu ID=%03lX DLCcode=%lu "
-                  "DATA=%02X %02X %02X %02X %02X %02X %02X %02X\r\n",
-                  (unsigned long)can_rx_last_bad_expected,
-                  (unsigned long)can_rx_last_bad_counter,
-                  (unsigned long)can_rx_last_bad_id,
-                  (unsigned long)can_rx_last_bad_dlc,
-                  can_rx_last_bad_data[0], can_rx_last_bad_data[1],
-                  can_rx_last_bad_data[2], can_rx_last_bad_data[3],
-                  can_rx_last_bad_data[4], can_rx_last_bad_data[5],
-                  can_rx_last_bad_data[6], can_rx_last_bad_data[7]);
+                  "FIRST w=%02lX e=%lu g=%lu tq=%lu r=%lu "
+                  "id=%03lX dlc=%lu b=%ld:%02X/%02X\r\n"
+                  "LAST w=%02lX e=%lu g=%lu tq=%lu r=%lu "
+                  "id=%03lX dlc=%lu b=%ld:%02X/%02X\r\n"
+                  "PROTO ev=%lu l=%lu dl=%lu irn=%lu "
+                  "p=%08lX e=%08lX i=%08lX t=%lu r=%lu\r\n",
+                  (unsigned long)can_rx_first_bad.reasons,
+                  (unsigned long)can_rx_first_bad.expected_counter,
+                  (unsigned long)can_rx_first_bad.received_counter,
+                  (unsigned long)can_rx_first_bad.tx_queued,
+                  (unsigned long)can_rx_first_bad.rx_count,
+                  (unsigned long)can_rx_first_bad.identifier,
+                  (unsigned long)can_rx_first_bad.dlc,
+                  (long)(int32_t)can_rx_first_bad.bad_byte_index,
+                  can_rx_first_bad.bad_byte_expected,
+                  can_rx_first_bad.bad_byte_received,
+                  (unsigned long)can_rx_last_bad.reasons,
+                  (unsigned long)can_rx_last_bad.expected_counter,
+                  (unsigned long)can_rx_last_bad.received_counter,
+                  (unsigned long)can_rx_last_bad.tx_queued,
+                  (unsigned long)can_rx_last_bad.rx_count,
+                  (unsigned long)can_rx_last_bad.identifier,
+                  (unsigned long)can_rx_last_bad.dlc,
+                  (long)(int32_t)can_rx_last_bad.bad_byte_index,
+                  can_rx_last_bad.bad_byte_expected,
+                  can_rx_last_bad.bad_byte_received,
+                  (unsigned long)can_rx_protocol_events,
+                  (unsigned long)can_rx_protocol_lec_events,
+                  (unsigned long)can_rx_protocol_dlec_events,
+                  (unsigned long)can_rx_protocol_ir_events,
+                  (unsigned long)can_rx_protocol_last_psr,
+                  (unsigned long)can_rx_protocol_last_ecr,
+                  (unsigned long)can_rx_protocol_last_ir,
+                  (unsigned long)can_rx_protocol_last_tx,
+                  (unsigned long)can_rx_protocol_last_rx);
 
               HAL_UART_Transmit(&huart1,
                                 (uint8_t *)detail_msg,

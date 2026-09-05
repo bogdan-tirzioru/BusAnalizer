@@ -275,8 +275,16 @@ A normal status report looks like:
 
 ```text
 TXQ=690113 RX=690081 ADDERR=0 free=0 rxFill=0 | C1 TEC=0 REC=0 EP=0 BO=0 LEC=7 | C2 TEC=0 REC=0 EP=0 BO=0 LEC=7
-GENCHK first=0 last=690080 seqErr=0 gap=0 back=0 idErr=0 dlcErr=0 hdrErr=0 payErr=0 fifoLost=0 maxFIFO=5
+GENX RUN tx=690113 rx=690081 d=32 next=690081 ok=690081 bad=0
+SEQ first=0 last=690080 err=0 miss=0 dup=0 back=0 fut=0
+RX id=0 dlc=0 hdr=0 esi=0 pf=0 pb=0 read=0 lost=0 max=5
 ```
+
+`RUN` means the counters are clean but TX frames are still in flight. Enter
+`0` to pause transmission and allow both hardware FIFOs to drain. A completely
+clean, reconciled run then changes to `GENX PASS`. Any frame, FIFO, read, or
+receive-side protocol error changes it to `GENX FAIL` and prints first/latest
+failure snapshots.
 
 ### Important counters
 
@@ -287,15 +295,17 @@ GENCHK first=0 last=690080 seqErr=0 gap=0 back=0 idErr=0 dlcErr=0 hdrErr=0 payEr
 | `REC` | CAN receive error counter | 0 |
 | `EP` | Error passive state | 0 |
 | `BO` | Bus-off state | 0 |
-| `seqErr` | Sequence discontinuities | 0 |
-| `gap` | Missing counter values | 0 |
+| `err` | Sequence discontinuities | 0 |
+| `miss` | Missing counter values, including loss before the first RX frame | 0 |
+| `dup` | Duplicate counter events | 0 |
 | `back` | Backward/reordered counter events | 0 |
-| `idErr` | Unexpected CAN identifier/type | 0 |
-| `dlcErr` | Unexpected DLC | 0 |
-| `hdrErr` | Wrong Classic/FD/BRS header state | 0 |
-| `payErr` | Payload pattern mismatch | 0 |
-| `fifoLost` | FDCAN2 RX FIFO message-lost events | 0 |
-| `maxFIFO` | Maximum observed FDCAN2 FIFO fill level | informational |
+| `fut` | RX counter not yet queued by FDCAN1 | 0 |
+| `id` / `dlc` | Unexpected CAN identifier/type or DLC | 0 |
+| `hdr` / `esi` | Wrong Classic/FD/BRS or ESI state | 0 |
+| `pf` / `pb` | Frames / individual bytes with payload mismatch | 0 |
+| `read` | HAL RX read failures | 0 |
+| `lost` | FDCAN2 RX FIFO message-lost events | 0 |
+| `max` | Maximum observed FDCAN2 FIFO fill level | informational |
 
 `LEC=7` can appear during normal operation; the important health indicators are the error counters and validation counters above.
 
@@ -307,14 +317,19 @@ TEC=0
 REC=0
 EP=0
 BO=0
-seqErr=0
-gap=0
+err=0
+miss=0
+dup=0
 back=0
-idErr=0
-dlcErr=0
-hdrErr=0
-payErr=0
-fifoLost=0
+fut=0
+id=0
+dlc=0
+hdr=0
+esi=0
+pf=0
+pb=0
+read=0
+lost=0
 ```
 
 ## Connecting the generator for BusAnalizer testing
